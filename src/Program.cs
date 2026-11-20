@@ -90,7 +90,7 @@ int Limit()
     string? given = Option("--limit");
     if (given is null) return 10;
     if (!int.TryParse(given, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n))
-        throw new UserError($"--limit {given} is not a whole number", "pass --limit with a number of examples, for example --limit 50");
+        throw new UserError($"--limit {given} is not a number from 0 up", "pass --limit with a number of examples, for example --limit 50");
     return n;
 }
 
