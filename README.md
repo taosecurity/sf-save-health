@@ -1,46 +1,30 @@
 # sf-save-health
 
-sf-save-health checks a Starfield save (`.sfs`) against the mods you have installed now and tells you what looks broken: plugins the save was made with that are gone, data those mods left behind in the save, forms a mod update removed, quests whose stages or objectives no longer exist, quests from removed mods that are still running, and how many objects the game has piled up during play (save bloat). Each finding says what it means and what you can do about it.
+sf-save-health checks a Starfield save (`.sfs`) against the mods you have installed now and tells you what looks broken. Each finding says what it means and what you can do about it.
 
-Use it before you load an old save after changing your mod list, after you remove a mod, or when a save starts acting strangely. With `solo` it compares a save from before a test with one from after it and reports only what changed, which shows what one mod did to a save.
+Use it before you load an old save after changing your mod list, after you remove a mod, or when a save starts acting strangely. It finds plugins the save needs that are gone, data those mods left behind, quests that a mod update broke, and save bloat (the full list is under "What it checks"). With `solo` it compares a save from before a test with one from after it and reports only what changed, which shows what one mod did to a save.
 
 It only reads. It never changes, moves or locks a save, and it never uploads anything.
 
-For AI assistants: see [AGENTS.md](AGENTS.md) for step-by-step instructions.
+Download the latest zip from [Releases](https://github.com/taosecurity/sf-save-health/releases).
 
 ## First command
 
-Download `sf-save-health-<version>.zip` from the [Releases](https://github.com/taosecurity/sf-save-health/releases) page, unpack it into a folder of its own, and run (in a Command Prompt or PowerShell window in that folder):
+Unpack `sf-save-health-<version>.zip` into a folder of its own, open a Command Prompt in the `sf-save-health-<version>` folder it makes (see Install), and run:
 
 ```
 sf-save-health check "%USERPROFILE%\Documents\My Games\Starfield\Saves\Save12_....sfs"
 ```
 
-Put the path in quotes: save folders and names often have spaces. In PowerShell, write the path as `"$env:USERPROFILE\Documents\My Games\Starfield\Saves\Save12_....sfs"` and start the program as `.\sf-save-health`.
+Put the path in quotes, because save folders and names often have spaces. In PowerShell, write the path as `"$env:USERPROFILE\Documents\My Games\Starfield\Saves\Save12_....sfs"` and start the program as `.\sf-save-health`.
 
 The tool finds the game's Data folder by itself on Steam and Game Pass installs (see `--data` below).
 
-## Install
+For AI assistants: step-by-step instructions are in [AGENTS.md](AGENTS.md).
 
-**From the release zip (Windows):** the zip needs the .NET 9 runtime (or a newer .NET). If the program says .NET is missing, install the ".NET Runtime 9" from [dot.net](https://dotnet.microsoft.com/download/dotnet/9.0). Check the download with its `.sha256` file if you like:
+## Example
 
-```
-certutil -hashfile sf-save-health-<version>.zip SHA256
-```
-
-**From source (Windows or Linux):** you need Git and the .NET SDK 9 or later. The save parser, [sf-save-reader](https://github.com/taosecurity/sf-save-reader), is a git submodule, so clone with `--recursive`:
-
-```
-git clone --recursive https://github.com/taosecurity/sf-save-health
-cd sf-save-health
-dotnet publish src/SaveHealth.csproj -c Release -o publish
-```
-
-The program is then `publish\sf-save-health.exe` on Windows, or `dotnet publish/sf-save-health.dll` on Linux. If you cloned without `--recursive`, run `git submodule update --init` before building.
-
-## Sample output
-
-This is a real save, checked with `--redact` so the character name is hidden. The player removed some mods since the save was made. Lines marked `...` were left out to keep it short.
+This is a real save, checked with `--redact` so the character name is hidden. The player removed some mods since the save was made (mod names changed). Lines marked `...` were left out to keep it short.
 
 ```
 > sf-save-health check "Save3_....sfs" --redact
@@ -49,12 +33,12 @@ sf-save-health 0.7.0: Save3_C875E8D7_<name>_000024_20261029193005_1_0_4.sfs
   78 plugins in the save; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
 
 S1. Plugins in the save that are missing from the Data folder: 18 of 78 plugins in the save are missing from the Data folder (10 with data left behind)
-  PROBLEM full plugin missing: SKKFastStartNewGame.esm [SKK Fast Start New Game (Starfield)]
+  PROBLEM full plugin missing: NewModA.esm [New Mod A]
             2 change records, 3 references inside records
-  PROBLEM full plugin missing: POICooldown.esm
+  PROBLEM full plugin missing: NewModB.esm
             1 change records, 1 references inside records
   ...
-  NOTE    full plugin missing: uniquePOInames.esm
+  NOTE    full plugin missing: NewModC.esm
             0 change records, 0 references inside records
   ...
     What it means (problem): The save was made with this plugin and still holds data for it, but it isn't installed now. If you removed the mod on purpose, that data stays behind; if not, reinstall it before playing.
@@ -64,8 +48,8 @@ S2. Form IDs that point past the save's plugin list: 0 found
 ...
 
 Q1. Running quests from plugins that are not installed: 580 quests in the save, 580 decoded exactly, 571 compared with their plugin versions
-  WARNING SKKFastStartNewGame.esm: 1 quest(s) still running, but the plugin is not installed
-            SKKFastStartNewGame.esm:8AA  running, stage
+  WARNING NewModA.esm: 1 quest(s) still running, but the plugin is not installed
+            NewModA.esm:8AA  running, stage
   ...
     What it means (warning): These quests were running when the save was made, and the mod that defines them is gone. The game drops them on load; if the mod was removed by mistake, reinstall it.
 
@@ -91,6 +75,44 @@ Not checked yet: Papyrus script data (orphaned scripts, stuck stacks).
 ```
 
 The exit code for this save is 2, because it found problems.
+
+## Install
+
+**From the release zip (Windows):**
+
+1. Download `sf-save-health-<version>.zip` from [Releases](https://github.com/taosecurity/sf-save-health/releases).
+2. Right-click the zip, choose **Extract All**, and pick a new, empty folder.
+3. Open the `sf-save-health-<version>` folder inside it in File Explorer, click the address bar at the top, type `cmd` and press Enter. A Command Prompt window opens in that folder, ready for the commands in this README.
+4. Run the first command above.
+
+The zip needs the .NET 9 runtime (or a newer .NET). If the program says .NET is missing, install the ".NET Runtime 9" from [dot.net](https://dotnet.microsoft.com/download/dotnet/9.0). Check the download with its `.sha256` file if you like:
+
+```
+certutil -hashfile sf-save-health-<version>.zip SHA256
+```
+
+**From source (Windows or Linux):** you need Git and the .NET SDK 9 or later. The save parser, [sf-save-reader](https://github.com/taosecurity/sf-save-reader), is a git submodule, so clone with `--recursive`:
+
+```
+git clone --recursive https://github.com/taosecurity/sf-save-health
+cd sf-save-health
+dotnet publish src/SaveHealth.csproj -c Release -o publish
+```
+
+The program is then `publish\sf-save-health.exe` on Windows, or `dotnet publish/sf-save-health.dll` on Linux. If you cloned without `--recursive`, run `git submodule update --init` before building.
+
+## Words used here
+
+- **Plugin:** a mod's data file (`.esm`, `.esp` or `.esl`). It adds or changes records in the game.
+- **Record:** one thing in a plugin, such as a weapon, a quest, a location or a setting.
+- **Form:** the game's word for a record once it is loaded. Each form has a Form ID.
+- **Form ID:** a record's number, such as `0002B560`. The first two digits depend on the load order, so the report writes forms as `Plugin.esm:2C9C97` (the plugin, then the number inside it).
+- **Change record:** an entry in a save file that holds what changed in one record during play. The game also calls these change forms.
+- **Load order:** the order the game loads plugins in. When two plugins change the same record, the one loaded later wins.
+- **Override:** a later plugin's copy of a record from an earlier one, which replaces it in the game.
+- **Quest stage and objective:** a quest moves through numbered stages (10, 20, ...) and shows objectives on screen. The save remembers which stages are done and the state of each objective.
+- **Data folder:** the game's `Data` folder, where the installed plugins are.
+- **Papyrus:** Starfield's scripting language. Mods' scripts also leave data in a save, which this version doesn't check yet.
 
 ## Where saves and plugins are
 
@@ -131,6 +153,44 @@ sf-save-health solo <StarfieldLogs-*.zip> [the same options]
 - The two saves can be given with `--before` and `--after`, or as the zip that [sf-log-collector](https://github.com/taosecurity/sf-log-collector) makes with its `p` option (it holds `saves\before-*` and `saves\after-*`).
 - It refuses exit saves (the game writes one every time you quit, so it isn't a fixed point), the same save twice, saves of two different characters, and an after save that is older than the before save.
 - The full report, with every quest change, is saved to `--reports <folder>`, or by default to `sf-save-health-reports` in the current folder. The screen shows the short version and the report's path.
+
+Here is a real `solo` run on a log-collector zip from a new character's test, with `--redact` (the zip and mod names are shortened, and lines marked `...` were left out):
+
+```
+> sf-save-health solo "StarfieldLogs-20261110-190752-....zip" --redact
+sf-save-health 0.7.0 solo: StarfieldLogs-20261110-190752-....zip
+  before: before-Save2_143C1F9EM<name>_000030_20261110235820_3_0_4.sfs  level 3, Jemison - The Lodge, playtime 0 days 0 hours 30 minutes, saved 2026-11-10 23:58 UTC
+  after:  after-Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs  level 8, Frontier, playtime 0 days 0 hours 38 minutes, saved 2026-11-11 00:06 UTC
+...
+
+Plugins:
+  13 in the after save (13 before)
+  in Data but not in the save: NewModA.esm, NewModB.esm, ... (not loaded by this game, or deployed later)
+
+New findings in the after save: none (0 in the after save in all, 0 in the before save)
+
+Objects created during play: 7,398 -> 13,018 (+5,620); placed objects 6,987 -> 12,551, actors 163 -> 197; save file 1.7 -> 2.2 MB
+  plugins whose created objects and actors grew most:
+      +4,629  Starfield.esm  (4,711 -> 9,340)
+        +244  SFBGS003.esm  (76 -> 320)
+         +83  SFBGS050.esm  (15 -> 98)
+          +4  SFBGS00D.esm  (1,666 -> 1,670)
+          +4  ShatteredSpace.esm  (9 -> 13)
+
+Quests that changed: 55
+  changed  DialogueUCTheDen (Starfield.esm:2A1049): running, stage - -> running, stage 50
+  new      FFDenR01 (Starfield.esm:1E7942): running, stage 10
+  ...
+  changed  MQ101 (Starfield.esm:3448): running, completed, stage 1800 -> stopped, completed, stage 9000
+  new      RI01 (Starfield.esm:2C9C97): stopped, completed, stage 10000
+  ...
+  ... 15 more in the saved report (or use --limit N)
+
+Verdict: Healthy: nothing new to worry about in the after save.
+Report saved to ...\sf-save-health-reports\StarfieldLogs-20261110-190752-....txt
+```
+
+The exit code is 0, because nothing new looks broken. "stage -" means that no stage of the quest is done yet.
 
 ## What it checks
 
@@ -197,7 +257,13 @@ For a bug report, run the command again with `--log sf-save-health.log --redact`
 - It doesn't check Papyrus script data yet, and it doesn't run the game's scripts: a quest the save calls "running" may still be starting.
 - It doesn't repair saves. To remove leftovers from a bloated save, see the advice in rule B1's finding, and always keep a backup of the save.
 
+## Found a mistake?
+
+Open an issue: https://github.com/taosecurity/sf-save-health/issues
+
 ## Credits
+
+sf-save-health is made by Richard Bejtlich. It builds on:
 
 - [sf-save-reader](https://github.com/taosecurity/sf-save-reader) reads the save (container, header, plugin list, change records and quest state). Its own credits list the work it builds on.
 - [BuildKit](https://github.com/taosecurity/BuildKit) and [Mutagen](https://github.com/Mutagen-Modding/Mutagen) read the plugins: every version of each quest, with its stages and objectives.

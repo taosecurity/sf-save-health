@@ -1,0 +1,44 @@
+# Changelog
+
+## 0.7.0 (2026-11-20)
+
+### What's new
+
+This is the first public release of sf-save-health, a read-only checker for Starfield saves.
+
+It compares a save with the mods you have installed now and reports what looks broken: plugins the save needs that are gone, data those mods left behind, forms a mod update removed, quests whose stages or objectives no longer exist, quests from removed mods that are still running, and save bloat. With `solo`, it compares a save from before a test with one from after it and reports only what changed.
+
+### Example
+
+A real save, checked with `--redact` after the player removed some mods (mod names changed, and lines marked `...` were left out):
+
+    > sf-save-health check "Save3_....sfs" --redact
+    sf-save-health 0.7.0: Save3_C875E8D7_<name>_000024_20261029193005_1_0_4.sfs
+      <player>, level 1, Jemison - The Lodge, playtime 0 days 0 hours 24 minutes, saved 2026-10-29 19:30 UTC
+      78 plugins in the save; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
+
+    S1. Plugins in the save that are missing from the Data folder: 18 of 78 plugins in the save are missing from the Data folder (10 with data left behind)
+      PROBLEM full plugin missing: NewModA.esm [New Mod A]
+                2 change records, 3 references inside records
+    ...
+    B1. Objects created during play (bloat): 6,378 objects created during play (OK; normal 25,000-35,000, note from 60,000, warning from 150,000); save file 1.9 MB
+    ...
+    11 problem(s), 6 warning(s), 8 note(s).
+    Not checked yet: Papyrus script data (orphaned scripts, stuck stacks).
+
+### How it works
+
+- It finds the game's Data folder by itself on Steam and Game Pass installs, and on Linux with Proton.
+- `--plugins` also checks the save against a load order (the game's Plugins.txt or a Vortex export of it).
+- `--redact` hides the character name, your user and computer names and the profile folder, so you can share a report.
+- `--log <file>` and `--verbose` write a troubleshooting log.
+- It never changes, moves or locks a save, and it never uploads anything.
+- It reads saves with [sf-save-reader](https://github.com/taosecurity/sf-save-reader) 0.1.2 and plugins with [BuildKit](https://github.com/taosecurity/BuildKit) 0.4.1 and Mutagen 0.54.4.
+
+### Download
+
+Download `sf-save-health-0.7.0.zip`, unpack it into a folder of its own, and run `sf-save-health check "<your save>.sfs"`. It needs the .NET 9 runtime. Check the download with `sf-save-health-0.7.0.zip.sha256`. The README has the details, and AGENTS.md has step-by-step instructions for AI assistants.
+
+## Earlier versions
+
+Versions before 0.7.0 were private test builds and were not released.

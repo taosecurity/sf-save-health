@@ -19,7 +19,7 @@ Don't use it to edit, clean or repair a save: it never writes to a save.
 
 ## 3. Install
 
-From the release: download `sf-save-health-<version>.zip` from https://github.com/taosecurity/sf-save-health/releases and unpack it into an empty folder. The program is `sf-save-health.exe` in that folder.
+From the release: download `sf-save-health-<version>.zip` from https://github.com/taosecurity/sf-save-health/releases and unpack it into an empty folder. The program is `sf-save-health.exe` in the `sf-save-health-<version>` folder inside it.
 
 From source:
 
@@ -45,7 +45,7 @@ To type plain `sf-save-health` instead, add the folder to PATH for the current w
 sf-save-health --help
 ```
 
-Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
+Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report, for example `sf-save-health 0.7.0: Save3_....sfs`). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
 
 To run the unit tests from a source clone (made-up files only, no game or saves needed): `dotnet test tests/SfSaveHealth.Tests -c Release` (expect all tests passed).
 
