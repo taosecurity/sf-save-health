@@ -29,8 +29,8 @@ try
     {
         case "check":
         {
+            int limit = Limit();
             var ctx = SaveContext.Open(args[1], DataFolder(), Option("--lang") ?? "en");
-            int limit = Option("--limit") is { } l ? int.Parse(l) : 10;
             var results = Structure.Run(ctx, limit);
             if (Option("--plugins") is { } pl) results.AddRange(ModList.Run(ctx, PluginList.Read(pl)));
             results.AddRange(QuestRules.Run(ctx, limit));
@@ -42,7 +42,7 @@ try
         }
         case "solo":
         {
-            int limit = Option("--limit") is { } l ? int.Parse(l) : 10;
+            int limit = Limit();
             string? before = Option("--before"), after = Option("--after");
             bool pair = args.Contains("--before") || args.Contains("--after");
             if (pair && (before is null || after is null || before.StartsWith("--") || after.StartsWith("--")))
@@ -82,6 +82,16 @@ string? Option(string name)
 {
     int i = Array.IndexOf(args, name);
     return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+}
+
+// --limit N: how many examples each finding lists (default 10). Anything but a whole number from 0 up is a usage error (exit 3).
+int Limit()
+{
+    string? given = Option("--limit");
+    if (given is null) return 10;
+    if (!int.TryParse(given, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n))
+        throw new UserError($"--limit {given} is not a whole number", "pass --limit with a number of examples, for example --limit 50");
+    return n;
 }
 
 // --data <folder> uses that folder; no --data, a bare --data (last, or followed by another option) or --data auto

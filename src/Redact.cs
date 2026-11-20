@@ -22,6 +22,9 @@ public static class Redact
 
     public static bool On => on;
 
+    /// <summary>True once a character name has been read from a save (<see cref="AddPlayer"/>); the log waits for it.</summary>
+    public static bool HasPlayer { get; private set; }
+
     /// <summary>Turns redaction on. Call before the log opens, so the log's first line is redacted too.</summary>
     public static void Enable()
     {
@@ -50,6 +53,7 @@ public static class Redact
         // The name's hex code is hidden only inside save file names (SaveNameHex), so a form ID that happens to spell
         // the same hex digits stays.
         if (name.Length >= 3) AddWord(name, Player, RegexOptions.None);
+        HasPlayer = true;
     }
 
     /// <summary>The name as the report prints it: <see cref="Player"/> when redacting.</summary>
@@ -74,7 +78,7 @@ public static class Redact
     /// <summary>Turns redaction off and forgets every rule (for the unit tests, which share this static state).</summary>
     internal static void Reset()
     {
-        lock (rules) { rules.Clear(); on = false; }
+        lock (rules) { rules.Clear(); on = false; HasPlayer = false; }
     }
 
     static void AddWord(string? word, string with, RegexOptions caseOption = RegexOptions.IgnoreCase)

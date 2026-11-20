@@ -29,7 +29,15 @@ cd sf-save-health
 dotnet publish src/SaveHealth.csproj -c Release -o publish
 ```
 
-The program is `publish\sf-save-health.exe` (Windows) or `dotnet publish/sf-save-health.dll` (Linux). The commands below call it `sf-save-health`; use the full path, or add the folder to PATH. If the clone was made without `--recursive`, run `git submodule update --init` first.
+The program is `publish\sf-save-health.exe` (Windows) or `dotnet publish/sf-save-health.dll` (Linux). The build also makes `bin` and `obj` folders in the clone, and `-o publish` overwrites the `publish` folder; git ignores all three. If the clone was made without `--recursive`, run `git submodule update --init` first.
+
+How to start it. The commands below call it `sf-save-health`; replace that with the program's path:
+
+- Command Prompt (cmd): `"C:\path\to\publish\sf-save-health.exe" --help`
+- PowerShell: `& "C:\path\to\publish\sf-save-health.exe" --help` (from the clone folder, `.\publish\sf-save-health.exe --help` also works)
+- Linux: `dotnet /path/to/publish/sf-save-health.dll --help`
+
+To type plain `sf-save-health` instead, add the folder to PATH for the current window: `set PATH=%PATH%;C:\path\to\publish` (cmd) or `$env:PATH += ";C:\path\to\publish"` (PowerShell).
 
 ## 4. Prove the install works
 
@@ -37,7 +45,7 @@ The program is `publish\sf-save-health.exe` (Windows) or `dotnet publish/sf-save
 sf-save-health --help
 ```
 
-Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report).
+Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
 
 To run the unit tests from a source clone (made-up files only, no game or saves needed): `dotnet test tests/SfSaveHealth.Tests -c Release` (expect all tests passed).
 
@@ -45,10 +53,15 @@ To run the unit tests from a source clone (made-up files only, no game or saves 
 
 Steam saves are in `%USERPROFILE%\Documents\My Games\Starfield\Saves`. Quote every path. The Data folder is found automatically on Steam and Game Pass; add `--data "<Starfield\Data>"` when it isn't.
 
+The paths below use Command Prompt (cmd) syntax. In PowerShell, write `%USERPROFILE%` as `$env:USERPROFILE` and `%LOCALAPPDATA%` as `$env:LOCALAPPDATA`, inside double quotes, for example `"$env:LOCALAPPDATA\Starfield\Plugins.txt"`.
+
+What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exit 2 is normal for a save made with mods that are no longer installed; it means the report found problems, not that the tool failed. Only exit 3 means the check didn't run.
+
 1. Check one save against the installed mods:
    `sf-save-health check "<save.sfs>"`
 2. Also check it against the load order the game will use:
    `sf-save-health check "<save.sfs>" --plugins "%LOCALAPPDATA%\Starfield\Plugins.txt"`
+   This adds rules M1 and M2 to the report, so it usually lists more problems and notes than task 1 for the same save.
 3. The same report as JSON:
    `sf-save-health check "<save.sfs>" --json`
 4. More examples per finding (default 10):
@@ -68,7 +81,7 @@ Steam saves are in `%USERPROFILE%\Documents\My Games\Starfield\Saves`. Quote eve
 - `--data <folder>|auto`: the game's Data folder. With no `--data`, a bare `--data` or `--data auto`: the `STARFIELD_DATA` environment variable, then every Steam library, then `<drive>:\XboxGames\Starfield\Content\Data`. The first folder that holds `Starfield.esm` is used.
 - `--plugins <file>` (check only): the game's `%LOCALAPPDATA%\Starfield\Plugins.txt` or a Vortex export of it. A modlist JSON is refused.
 - Output: the text report on stdout; with `--json`, one JSON object (`schema` `savehealth-report/1`, `version`, `save`, `data`, `verdict`, `exitCode`, `rules`). Errors and `--verbose` lines go to stderr.
-- Files written: `--log <file>` (appended to), and `solo`'s full report, `<name>.txt` in `--reports <folder>` (default `sf-save-health-reports` in the current folder, created if needed). `solo` with a zip unpacks the two saves to a temporary folder and deletes it afterwards. Nothing else.
+- Files written: `--log <file>` (appended to), and `solo`'s full report, `<name>.txt` in `--reports <folder>` (default `sf-save-health-reports` in the current folder; the folder, given or default, is created if needed). `solo` with a zip unpacks the two saves to a temporary folder and deletes it afterwards. Nothing else.
 
 ## 7. Exit codes
 
@@ -81,7 +94,7 @@ Steam saves are in `%USERPROFILE%\Documents\My Games\Starfield\Saves`. Quote eve
 
 ## 8. Log
 
-No log file unless asked for. `--verbose` writes timestamped lines to stderr; `--log <file>` appends the same lines to that file, starting with the version and the command line. The log holds the save's size and header, the Data folder used, each rule's counts and decisions (each missing plugin, each quest rule's totals), plugin data warnings and parser warnings. With `--redact` the log is redacted too.
+No log file unless asked for. `--verbose` writes timestamped lines to stderr; `--log <file>` appends the same lines to that file, starting with the version and the command line. The log holds the save's size and header, the Data folder used, each rule's counts and decisions (each missing plugin, each quest rule's totals), plugin data warnings and parser warnings. With `--redact` the log is redacted too. Without it, the log holds the full command line and save paths, which can include the user's profile folder and a character name in a folder name; add `--redact` to any run whose log or report will be shared.
 
 ## 9. Limits
 

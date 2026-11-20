@@ -78,6 +78,41 @@ public class RedactTests : IDisposable
     }
 
     [Fact]
+    public void Log_lines_written_before_the_name_is_known_are_redacted_too()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"sfsh-test-{Guid.NewGuid():N}.log");
+        try
+        {
+            Redact.Enable();
+            Log.Open(path, toConsole: false);
+            Log.Write(@"reading C:\Archive\Kestrel-0000000A\Save3_0000000A_4B657374726563_000024_x.sfs");
+            Redact.AddPlayer("Kestrel");
+            Log.Write("parsed: Kestrel level 1");
+            Log.Close();
+            string text = File.ReadAllText(path);
+            Assert.DoesNotContain("Kestrel", text);
+            Assert.Contains(@"reading C:\Archive\<player>-0000000A\Save3_0000000A_<name>_000024_x.sfs", text);
+            Assert.Contains("parsed: <player> level 1", text);
+        }
+        finally { Log.Close(); File.Delete(path); }
+    }
+
+    [Fact]
+    public void Log_lines_are_written_at_close_when_no_save_was_read()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"sfsh-test-{Guid.NewGuid():N}.log");
+        try
+        {
+            Redact.Enable();
+            Log.Open(path, toConsole: false);
+            Log.Write("error: no save file x.sfs");
+            Log.Close();
+            Assert.Contains("error: no save file x.sfs", File.ReadAllText(path));
+        }
+        finally { Log.Close(); File.Delete(path); }
+    }
+
+    [Fact]
     public void Reset_turns_redaction_off_and_forgets_the_rules()
     {
         Redact.Enable();
