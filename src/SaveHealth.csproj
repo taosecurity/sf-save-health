@@ -34,7 +34,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\tools\BuildKit\BuildKit.csproj" />
+    <PackageReference Include="Taosecurity.Starfield.BuildKit" Version="[0.4.1]" />
   </ItemGroup>
 
 </Project>

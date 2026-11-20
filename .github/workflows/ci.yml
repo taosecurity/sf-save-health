@@ -3,8 +3,8 @@
 # in a temp folder, so no game, no Data folder and no real save is needed.
 #
 # The parser, sf-save-reader, is a git submodule in external/sf-save-reader, so the checkout fetches submodules.
-# BuildKit (which brings Mutagen) must come from NuGet as the package Taosecurity.Starfield.BuildKit at an exact
-# version. While src/SaveHealth.csproj still points at a local BuildKit project, this workflow can't build.
+# BuildKit (which brings Mutagen) comes from NuGet as the package Taosecurity.Starfield.BuildKit at an exact
+# version, locked by src/packages.lock.json.
 name: tests
 
 on:

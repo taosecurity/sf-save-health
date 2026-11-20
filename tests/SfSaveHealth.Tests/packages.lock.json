@@ -347,6 +347,14 @@
         "resolved": "4.5.4",
         "contentHash": "zteT+G8xuGu6mS+mzDzYXbzS7rd3K6Fjb9RiZlYlJPam2/hU7JCBZBVEcywNuR+oZ1ncTvc/cq0faRr3P01OVg=="
       },
+      "Taosecurity.Starfield.BuildKit": {
+        "type": "Transitive",
+        "resolved": "0.4.1",
+        "contentHash": "C3D2U3R+f9hNPuVFrVCt1lTgCRz+jg9maIi04YJ6+tGmnvyIs+7vNt89K5cy1XJcjzmBaDXZyPuH5X8qI2AGww==",
+        "dependencies": {
+          "Mutagen.Bethesda.Starfield": "[0.54.4]"
+        }
+      },
       "TestableIO.System.IO.Abstractions": {
         "type": "Transitive",
         "resolved": "22.1.1",
@@ -418,16 +426,10 @@
           "xunit.extensibility.core": "[2.9.2]"
         }
       },
-      "buildkit": {
-        "type": "Project",
-        "dependencies": {
-          "Mutagen.Bethesda.Starfield": "[0.54.4, 0.54.4]"
-        }
-      },
       "sf-save-health": {
         "type": "Project",
         "dependencies": {
-          "BuildKit": "[0.4.1, )",
+          "Taosecurity.Starfield.BuildKit": "[0.4.1, 0.4.1]",
           "sf-save-reader": "[0.1.2, )"
         }
       },

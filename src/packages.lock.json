@@ -2,6 +2,15 @@
   "version": 1,
   "dependencies": {
     "net9.0": {
+      "Taosecurity.Starfield.BuildKit": {
+        "type": "Direct",
+        "requested": "[0.4.1, 0.4.1]",
+        "resolved": "0.4.1",
+        "contentHash": "C3D2U3R+f9hNPuVFrVCt1lTgCRz+jg9maIi04YJ6+tGmnvyIs+7vNt89K5cy1XJcjzmBaDXZyPuH5X8qI2AGww==",
+        "dependencies": {
+          "Mutagen.Bethesda.Starfield": "[0.54.4]"
+        }
+      },
       "DynamicData": {
         "type": "Transitive",
         "resolved": "9.4.31",
@@ -318,12 +327,6 @@
         "type": "Transitive",
         "resolved": "0.13.1.398",
         "contentHash": "Cm9fOJZ5Meb7uFON2XtvO2oiw/2hxAnkXI+5enms0AGNRZu5vPhw1PF5H1B2W8SbRZxqE/hkzMkWdIOO0MGPzg=="
-      },
-      "buildkit": {
-        "type": "Project",
-        "dependencies": {
-          "Mutagen.Bethesda.Starfield": "[0.54.4, 0.54.4]"
-        }
       },
       "sf-save-reader": {
         "type": "Project"
