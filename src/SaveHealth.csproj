@@ -13,6 +13,8 @@
     <RootNamespace>SaveHealth</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <Version>0.7.0</Version>
+    <!-- Release builds map source paths to /_/, so no local build folder ends up in the DLL. -->
+    <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <!-- The parser: the public sf-save-reader (GPL-3.0), a git submodule in external\sf-save-reader pinned at v0.1.2.
