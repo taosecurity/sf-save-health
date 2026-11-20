@@ -38,21 +38,36 @@ public static class Log
     public static void Close()
     {
         Flush();
-        file?.Dispose();
+        try { file?.Dispose(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Failed(e); }
         file = null;
         verbose = false;
     }
 
     static void Flush()
     {
-        foreach (var (stamp, message) in pending) Emit(stamp, message);
+        var lines = pending.ToList();
         pending.Clear();
+        foreach (var (stamp, message) in lines) Emit(stamp, message);
     }
 
+    // A log that can't be written (a full disk, a removed drive, a closed stream) must never change the result or the
+    // exit code: logging stops after one note on the error stream, and the check carries on.
     static void Emit(string stamp, string message)
     {
         string line = $"{stamp} {Redact.Apply(message)}";
-        file?.WriteLine(line);
-        if (verbose) Console.Error.WriteLine(line);
+        try { file?.WriteLine(line); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { Failed(e); }
+        if (verbose)
+            try { Console.Error.WriteLine(line); }
+            catch (Exception e) when (e is IOException or ObjectDisposedException) { verbose = false; }
+    }
+
+    static void Failed(Exception e)
+    {
+        try { file?.Dispose(); } catch (Exception) { }
+        file = null;
+        try { Console.Error.WriteLine(Redact.Apply($"note: the log file can't be written any more ({e.Message}), so logging stopped; the check itself goes on")); }
+        catch (Exception) { }
     }
 }

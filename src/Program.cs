@@ -68,24 +68,16 @@ try
             {
                 saveError = e.Message;
             }
-            // The check has run, so a failing console or log write from here on keeps the verdict's exit code.
-            try
+            // Log.Write never throws (a failing log stops with a note), so the verdict's exit code always stands here.
+            if (saveError is null)
             {
-                if (saveError is null)
-                {
-                    Console.WriteLine(Redact.Apply($"Report saved to {report}"));
-                    Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
-                }
-                else
-                {
-                    Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
-                    Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
-                }
+                Console.WriteLine(Redact.Apply($"Report saved to {report}"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            else
             {
-                try { Console.Error.WriteLine(Redact.Apply($"error: couldn't write the log or the last line: {e.Message}\n  fix: check the --log folder (the check itself finished)")); }
-                catch (IOException) { }
+                Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
             }
             return o.ExitCode;
         }

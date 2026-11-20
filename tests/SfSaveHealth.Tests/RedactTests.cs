@@ -113,6 +113,28 @@ public class RedactTests : IDisposable
     }
 
     [Fact]
+    public void A_log_that_can_no_longer_be_written_never_throws()
+    {
+        // A full disk or a removed drive: the writer's stream is gone. Write and Close must carry on quietly, so
+        // the check keeps its result and exit code (code review of 8dede78, 2026-11-20).
+        string path = Path.Combine(Path.GetTempPath(), $"sfsh-test-{Guid.NewGuid():N}.log");
+        try
+        {
+            Log.Open(path, toConsole: false);
+            var field = typeof(Log).GetField("file", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+            var broken = new MemoryStream();
+            var writer = new StreamWriter(broken) { AutoFlush = true };
+            broken.Dispose();
+            ((StreamWriter?)field.GetValue(null))?.Dispose();
+            field.SetValue(null, writer);
+            Log.Write("done: Healthy exit 0");
+            Log.Write("a second line after the failure");
+            Log.Close();
+        }
+        finally { Log.Close(); File.Delete(path); }
+    }
+
+    [Fact]
     public void Names_are_hidden_in_the_json_report_too()
     {
         Redact.Enable();
