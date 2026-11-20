@@ -127,9 +127,12 @@ public class RedactTests : IDisposable
             broken.Dispose();
             ((StreamWriter?)field.GetValue(null))?.Dispose();
             field.SetValue(null, writer);
+            int before = Log.Failures;
             Log.Write("done: Healthy exit 0");
-            Log.Write("a second line after the failure");
+            Assert.Null(field.GetValue(null));             // logging stopped after the first failure
+            Log.Write("a second line after the failure");  // no retry, no second note
             Log.Close();
+            Assert.Equal(before + 1, Log.Failures);
         }
         finally { Log.Close(); File.Delete(path); }
     }

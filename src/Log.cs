@@ -60,14 +60,19 @@ public static class Log
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { Failed(e); }
         if (verbose)
             try { Console.Error.WriteLine(line); }
-            catch (Exception e) when (e is IOException or ObjectDisposedException) { verbose = false; }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { verbose = false; }
     }
+
+    // The note leaves out the exception's message: it usually holds the log's full path, which --redact may not be
+    // able to hide yet. The type is enough to tell a full disk from a missing drive in a bug report.
+    internal static int Failures { get; private set; }
 
     static void Failed(Exception e)
     {
         try { file?.Dispose(); } catch (Exception) { }
         file = null;
-        try { Console.Error.WriteLine(Redact.Apply($"note: the log file can't be written any more ({e.Message}), so logging stopped; the check itself goes on")); }
+        Failures++;
+        try { Console.Error.WriteLine($"note: the log file couldn't be written ({e.GetType().Name}), so some log lines are missing; the result and exit code are not affected"); }
         catch (Exception) { }
     }
 }

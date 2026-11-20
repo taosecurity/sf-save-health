@@ -66,7 +66,7 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
    `sf-save-health check "<save.sfs>" --json`
 4. More examples per finding (default 10):
    `sf-save-health check "<save.sfs>" --limit 50`
-   `--limit` takes a whole number from 0 up to 2147483647. If the `--log` file can't be written during a run (a full disk, a removed drive), logging stops with a `note:` line on the error stream, and the result and exit code are unchanged. Rules Q2 and Q3 list one finding per quest, up to 10 times the limit; the rest become one `... N more quest(s)` finding, so the exit code still counts them.
+   `--limit` takes a whole number from 0 up to 2147483647. Rules Q2 and Q3 list one finding per quest, up to 10 times the limit; the rest become one `... N more quest(s)` finding, so the exit code still counts them.
 5. What changed between a save made before a test and one made after it:
    `sf-save-health solo --before "<a.sfs>" --after "<b.sfs>"`
 6. The same from an sf-log-collector zip that holds `saves\before-*` and `saves\after-*`:
@@ -97,7 +97,7 @@ If `solo` can't save its full report into `--reports`, it prints an `error:` lin
 
 ## 8. Log
 
-No log file unless asked for. `--verbose` writes timestamped lines to stderr; `--log <file>` appends the same lines to that file, starting with the version and the command line. The log holds the save's size and header, the Data folder used, each rule's counts and decisions (each missing plugin, each quest rule's totals), plugin data warnings and parser warnings. With `--redact` the log is redacted too. Without it, the log holds the full command line and save paths, which can include the user's profile folder and a character name in a folder name; add `--redact` to any run whose log or report will be shared.
+No log file unless asked for. If the `--log` file can't be written during a run (a full disk, a removed drive), logging stops with one `note:` line on stderr, and the result and exit code are unchanged. `--verbose` writes timestamped lines to stderr; `--log <file>` appends the same lines to that file, starting with the version and the command line. The log holds the save's size and header, the Data folder used, each rule's counts and decisions (each missing plugin, each quest rule's totals), plugin data warnings and parser warnings. With `--redact` the log is redacted too. Without it, the log holds the full command line and save paths, which can include the user's profile folder and a character name in a folder name; add `--redact` to any run whose log or report will be shared.
 
 ## 9. Limits
 

@@ -68,15 +68,16 @@ try
             {
                 saveError = e.Message;
             }
-            // Log.Write never throws (a failing log stops with a note), so the verdict's exit code always stands here.
+            // The check has finished, so nothing from here on may change the verdict's exit code: Log.Write never
+            // throws (a failing log stops with a note), and the two console lines are best effort.
             if (saveError is null)
             {
-                Console.WriteLine(Redact.Apply($"Report saved to {report}"));
+                BestEffort(() => Console.WriteLine(Redact.Apply($"Report saved to {report}")));
                 Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
             }
             else
             {
-                Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
+                BestEffort(() => Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)")));
                 Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
             }
             return o.ExitCode;
@@ -110,6 +111,13 @@ finally { Log.Close(); }
 
 // The value after an option, or null when the option isn't given. An option given without a value (last, or followed by
 // another --option) is a usage error.
+// A console write that must not end the run: a closed or full stdout/stderr only loses that line.
+static void BestEffort(Action write)
+{
+    try { write(); }
+    catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }
+}
+
 string? Option(string name)
 {
     int i = Array.IndexOf(args, name);
