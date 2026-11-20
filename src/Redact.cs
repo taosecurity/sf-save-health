@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace SaveHealth;
@@ -22,8 +23,14 @@ public static class Redact
 
     public static bool On => on;
 
-    /// <summary>True once a character name has been read from a save (<see cref="AddPlayer"/>); the log waits for it.</summary>
-    public static bool HasPlayer { get; private set; }
+    static int expected = 1, added;
+
+    /// <summary>True once every expected save has been read (<see cref="AddPlayer"/>, once per save); the log waits for it.</summary>
+    public static bool HasPlayer => added >= expected;
+
+    /// <summary>How many saves will be read (1 for check, 2 for solo), so the log holds its lines until the last
+    /// character name is known: two saves of a solo pair can be different characters.</summary>
+    public static void ExpectPlayers(int count) => expected = Math.Max(count, 1);
 
     /// <summary>Turns redaction on. Call before the log opens, so the log's first line is redacted too.</summary>
     public static void Enable()
@@ -33,8 +40,8 @@ public static class Redact
             if (dir is { Length: > 3 })
             {
                 string d = dir.TrimEnd('\\', '/');
-                // As written, with JSON's doubled backslashes, and with forward slashes.
-                foreach (var form in new[] { d, d.Replace("\\", "\\\\"), d.Replace('\\', '/') }.Distinct())
+                // As written, with JSON's doubled backslashes (and its \uXXXX escapes), and with forward slashes.
+                foreach (var form in new[] { d, d.Replace("\\", "\\\\"), Json(d), d.Replace('\\', '/'), Json(d.Replace('\\', '/')) }.Distinct())
                     AddRule(new Regex(Regex.Escape(form), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant),
                         OperatingSystem.IsWindows() ? "%USERPROFILE%" : "~");
             }
@@ -47,13 +54,14 @@ public static class Redact
     /// (<see cref="Name"/>), because replacing them everywhere would also hit ordinary words.</summary>
     public static void AddPlayer(string? name)
     {
-        if (!on || string.IsNullOrWhiteSpace(name)) return;
+        if (!on) return;
+        added++;
+        if (string.IsNullOrWhiteSpace(name)) return;
         name = name.Trim();
         // Case-sensitive: a character called "Solo" must not turn the command word "solo" into <player>.
         // The name's hex code is hidden only inside save file names (SaveNameHex), so a form ID that happens to spell
         // the same hex digits stays.
         if (name.Length >= 3) AddWord(name, Player, RegexOptions.None);
-        HasPlayer = true;
     }
 
     /// <summary>The name as the report prints it: <see cref="Player"/> when redacting.</summary>
@@ -78,14 +86,19 @@ public static class Redact
     /// <summary>Turns redaction off and forgets every rule (for the unit tests, which share this static state).</summary>
     internal static void Reset()
     {
-        lock (rules) { rules.Clear(); on = false; HasPlayer = false; }
+        lock (rules) { rules.Clear(); on = false; expected = 1; added = 0; }
     }
 
     static void AddWord(string? word, string with, RegexOptions caseOption = RegexOptions.IgnoreCase)
     {
         if (string.IsNullOrWhiteSpace(word) || word.Length < 2) return;
-        AddRule(new Regex(@"(?<![\p{L}\p{N}_])" + Regex.Escape(word) + @"(?![\p{L}\p{N}_])", caseOption | RegexOptions.CultureInvariant), with);
+        // As written, and as the JSON report writes it (System.Text.Json escapes non-ASCII and characters such as ' as \uXXXX).
+        foreach (var form in new[] { word, Json(word) }.Distinct())
+            AddRule(new Regex(@"(?<![\p{L}\p{N}_])" + Regex.Escape(form) + @"(?![\p{L}\p{N}_])", caseOption | RegexOptions.CultureInvariant), with);
     }
+
+    /// <summary>A string as the JSON report writes it, without the quotes (the serializer's default escaping).</summary>
+    static string Json(string s) => JsonEncodedText.Encode(s).ToString();
 
     static void AddRule(Regex pattern, string with)
     {

@@ -114,7 +114,7 @@ sf-save-health check <save.sfs> [--data <folder>|auto] [--plugins <plugins.txt>]
 | `--data <folder>` | The game's Data folder to check the save against. With no `--data`, a bare `--data` or `--data auto`, the tool looks in this order: the `STARFIELD_DATA` environment variable, every Steam library, then Game Pass (`<drive>:\XboxGames\Starfield\Content\Data` on each drive). The first folder that holds `Starfield.esm` is used. |
 | `--plugins <file>` | Also check the save against a load order: the game's `Plugins.txt`, or a Vortex export of it (one plugin per line, turned-on plugins start with `*`). Adds rules M1 and M2. |
 | `--json` | Writes the report as one JSON object (schema `savehealth-report/1`) instead of text. |
-| `--limit N` | How many examples each finding lists (default 10). The rest are counted as "... N more". |
+| `--limit N` | How many examples each finding lists (default 10). The rest are counted as "... N more". Q2 and Q3 list one finding per quest, up to 10 times N; any quests past that are counted in one more finding, so the verdict and exit code always include them. |
 | `--lang <code>` | The language of names read from the plugins' string files (default `en`). |
 | `--redact` | Hides the character name, the Windows user name, the computer name and your profile folder (below). |
 | `--log <file>`, `--verbose` | A troubleshooting log (below). |
@@ -122,7 +122,7 @@ sf-save-health check <save.sfs> [--data <folder>|auto] [--plugins <plugins.txt>]
 ### `solo`: what changed between a save before a test and one after it
 
 ```
-sf-save-health solo --before <a.sfs> --after <b.sfs> [--data <folder>|auto] [--reports <folder>] [--limit N] [--redact] [--log <file>] [--verbose]
+sf-save-health solo --before <a.sfs> --after <b.sfs> [--data <folder>|auto] [--reports <folder>] [--limit N] [--lang <code>] [--redact] [--log <file>] [--verbose]
 sf-save-health solo <StarfieldLogs-*.zip> [the same options]
 ```
 

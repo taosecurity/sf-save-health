@@ -45,7 +45,9 @@ public static class Solo
             if (QuestRules.SaveType(n) == "exit save")
                 throw new UserError($"{n} is an exit save; solo compares two hard saves made on purpose",
                     "the game writes an exit save every time you quit, so it isn't a fixed 'before' or 'after' point. Make a hard save (Save menu) before and after the test, and pass those two");
-        if (Path.GetFullPath(beforePath).Equals(Path.GetFullPath(afterPath), StringComparison.OrdinalIgnoreCase) || SameBytes(beforePath, afterPath))
+        // Paths differ only in case on Windows and macOS for the same file; on Linux they are two files.
+        var paths = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        if (Path.GetFullPath(beforePath).Equals(Path.GetFullPath(afterPath), paths) || SameBytes(beforePath, afterPath))
             throw new UserError($"the before and after saves are the same save ({nb})", "make a new hard save after the test, and pass it with --after");
         var a = Check(beforePath, dataDir, language, limit);
         var b = Check(afterPath, dataDir, language, limit);

@@ -95,7 +95,7 @@ public static class QuestRules
             findings.Add(new Finding("Q1", Level.Warning, Reliability.Exact, grp.Key.ToLowerInvariant(),
                 $"{grp.Key}: {grp.Count()} quest(s) still running, but the plugin is not installed",
                 "These quests were running when the save was made, and the mod that defines them is gone. The game drops them on load; if the mod was removed by mistake, reinstall it.",
-                Examples(grp, limit, q => $"{q.Label}  {q.State.Status}, stage {q.State.CurrentStage}")) { Count = grp.Count() });
+                Examples(grp, limit, q => $"{q.Label}  {q.State.Status}, stage {Stage(q)}")) { Count = grp.Count() });
         var lines = new List<string> { summary };
         if (failed > 0) lines.Add($"{failed} quest record(s) could not be decoded, so they were not checked (details in the log)");
         return new RuleResult("Q1", "Running quests from plugins that are not installed", findings, lines);
@@ -113,7 +113,8 @@ public static class QuestRules
         var findings = bad.Select(b => new Finding("Q2", Level.Warning, Reliability.Exact, b.Q.Record.Form.FormId.ToString("X8"),
             $"{b.Q.Label}: done stage(s) {string.Join(", ", b.Missing)} no longer exist",
             "The save says these stages were done, but the quest as the installed plugins now define it has no such stage. A mod update (or a mod that overrides the quest) probably renumbered or removed them; the quest may not continue as expected.",
-            [$"{b.Q.State.Status}, stage {b.Q.State.CurrentStage}; the stage list in use comes from {b.Q.Final!.StagePlugin} ({b.Q.Final.Stages.Count} stages; versions: {b.Q.Final.Plugins})"])).Take(limit * 10).ToList();
+            [$"{b.Q.State.Status}, stage {Stage(b.Q)}; the stage list in use comes from {b.Q.Final!.StagePlugin} ({b.Q.Final.Stages.Count} stages; versions: {b.Q.Final.Plugins})"])).ToList();
+        Cap(findings, limit, "Q2", "done stages the quest no longer has");
         return new RuleResult("Q2", "Done stages the quest no longer has", findings, [$"{bad.Count:N0} quest(s)"]);
     }
 
@@ -129,7 +130,8 @@ public static class QuestRules
         var findings = bad.Select(b => new Finding("Q3", Level.Warning, Reliability.Exact, b.Q.Record.Form.FormId.ToString("X8"),
             $"{b.Q.Label}: objective(s) {string.Join(", ", b.Missing)} no longer exist",
             "The save holds state for these objectives, but the quest as the installed plugins now define it has no such objective. A mod update (or a mod that overrides the quest) probably removed them; a shown objective may never clear.",
-            [$"{b.Q.State.Status}; the objective list in use comes from {b.Q.Final!.ObjectivePlugin} ({b.Q.Final.Objectives.Count} objectives; versions: {b.Q.Final.Plugins})"])).Take(limit * 10).ToList();
+            [$"{b.Q.State.Status}; the objective list in use comes from {b.Q.Final!.ObjectivePlugin} ({b.Q.Final.Objectives.Count} objectives; versions: {b.Q.Final.Plugins})"])).ToList();
+        Cap(findings, limit, "Q3", "objectives the quest no longer has");
         return new RuleResult("Q3", "Objectives the quest no longer has", findings, [$"{bad.Count:N0} quest(s)"]);
     }
 
@@ -173,9 +175,25 @@ public static class QuestRules
             findings.Add(new Finding("Q5", Level.Note, Reliability.Heuristic, "q5-done-open",
                 $"{doneShown.Count} completed quest(s) still running with an open objective",
                 "These quests are marked complete but still show an objective that isn't done. That can be a leftover marker in the quest log.",
-                Examples(doneShown, limit, q => $"{q.Label}  stage {q.State.CurrentStage}")) { Count = doneShown.Count });
+                Examples(doneShown, limit, q => $"{q.Label}  stage {Stage(q)}")) { Count = doneShown.Count });
         return new RuleResult("Q5", "Quests caught starting or stopping, or complete with open objectives (heuristic)", findings,
             [$"{pending.Count:N0} starting or stopping, {doneShown.Count:N0} complete with an open objective"]);
+    }
+
+    /// <summary>The quest's current stage, or "-" when it has none (as sf-save-reader prints it).</summary>
+    static string Stage(SavedQuest q) => q.State.CurrentStage?.ToString() ?? "-";
+
+    /// <summary>Q2 and Q3 list one finding per quest. Past limit x 10 quests the rest become one finding that counts
+    /// them, so the verdict and exit code still see every quest (with --limit 0, only that finding).</summary>
+    internal static void Cap(List<Finding> findings, int limit, string rule, string what)
+    {
+        int keep = limit * 10;
+        if (findings.Count <= keep) return;
+        int more = findings.Count - keep;
+        findings.RemoveRange(keep, more);
+        findings.Add(new Finding(rule, Level.Warning, Reliability.Exact, rule.ToLowerInvariant() + "-more",
+            $"... {more:N0} more quest(s) with {what} (use --limit N to list them)",
+            "Each of these quests is like the ones listed above; raise --limit to see them one by one.", []) { Count = more });
     }
 
     static List<string> Examples(IEnumerable<SavedQuest> list, int limit, Func<SavedQuest, string> line)

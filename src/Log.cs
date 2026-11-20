@@ -2,7 +2,8 @@ namespace SaveHealth;
 
 /// <summary>Troubleshooting log: what was read, what each rule decided and why something failed.
 /// Written to --log &lt;file&gt; (appended), and to the error stream with --verbose.
-/// With --redact, lines are held back until the save's character name is known (or the log closes), so a name that is
+/// With --redact, lines are held back until every save's character name is known (solo reads two saves; see
+/// <see cref="Redact.ExpectPlayers"/>), or the log closes, so a name that is
 /// part of a folder name in the first lines (the command line, "reading ...") is hidden too.</summary>
 public static class Log
 {
@@ -14,8 +15,12 @@ public static class Log
     {
         verbose = toConsole;
         if (path is null) return;
-        file = new StreamWriter(path, append: true) { AutoFlush = true };
-        Write($"sf-save-health {typeof(Log).Assembly.GetName().Version} started: {string.Join(' ', Environment.GetCommandLineArgs().Skip(1))}");
+        try { file = new StreamWriter(path, append: true) { AutoFlush = true }; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            throw new UserError($"couldn't open the log file {path}: {e.Message}", "pass --log with a file in a folder that exists and that you can write to");
+        }
+        Write($"sf-save-health {typeof(Log).Assembly.GetName().Version?.ToString(3)} started: {string.Join(' ', Environment.GetCommandLineArgs().Skip(1))}");
     }
 
     public static void Write(string message)

@@ -84,9 +84,9 @@ public static class Structure
     }
 
     /// <summary>Bethesda's own plugins: the game, its DLC, the edition extras, ship blueprints and Bethesda Creations
-    /// (SFBGSxxx, Trackers Alliance sfta01-06).</summary>
+    /// (SFBGSxxx and their parts such as SFBGSxxx_a, Trackers Alliance sfta01-06). The one list every rule uses.</summary>
     public static bool IsOfficial(string plugin) => System.Text.RegularExpressions.Regex.IsMatch(plugin,
-        @"^(Starfield|ShatteredSpace|Constellation|OldMars|BlueprintShips-[^.]+|SFBGS[0-9A-F]{3}|sfta\d\d)\.esm$",
+        @"^(Starfield|ShatteredSpace|Constellation|OldMars|BlueprintShips-[^.]+|SFBGS[0-9A-F]{3}(?:_[^.]+)?|sfta\d\d)\.esm$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     static List<string> Examples(List<Use> list, GameData game, int limit)

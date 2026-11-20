@@ -70,6 +70,19 @@ public class PluginTests
     }
 
     [Theory]
+    [InlineData(0, 1, 3)]     // --limit 0: one finding that counts all three, so the exit code still sees them
+    [InlineData(1, 3, 0)]     // limit x 10 = 10 kept: nothing to count
+    public void Q2_and_Q3_keep_every_quest_in_the_count(int limit, int kept, int more)
+    {
+        var findings = Enumerable.Range(0, 3).Select(i => new Finding("Q2", Level.Warning, Reliability.Exact, $"{i:X8}", $"quest {i}", "m", [])).ToList();
+        QuestRules.Cap(findings, limit, "Q2", "done stages the quest no longer has");
+        Assert.Equal(kept, findings.Count);
+        Assert.Equal(3, findings.Sum(f => f.Count));
+        Assert.Equal(1, Report.ExitCode([new RuleResult("Q2", "n", findings, [])]));
+        if (more > 0) Assert.Equal(more, findings[^1].Count);
+    }
+
+    [Theory]
     [InlineData("Starfield.esm", true)]
     [InlineData("starfield.ESM", true)]
     [InlineData("Constellation.esm", true)]
@@ -78,10 +91,16 @@ public class PluginTests
     [InlineData("BlueprintShips-Starfield.esm", true)]
     [InlineData("SFBGS003.esm", true)]
     [InlineData("sfbgs00a_a.esm", true)]
+    [InlineData("sfta01.esm", true)]
+    [InlineData("SFTA06.ESM", true)]
+    [InlineData("SFBGSMyMod.esm", false)]
     [InlineData("MyMod.esm", false)]
     [InlineData("MyMod-ShatteredSpaceAddon.esm", false)]
     [InlineData("StarfieldPlus.esm", false)]
     [InlineData("MySFBGS.esm", false)]
-    public void IsOfficial_knows_the_official_plugins(string name, bool official) =>
+    public void IsOfficial_knows_the_official_plugins(string name, bool official)
+    {
         Assert.Equal(official, ModList.IsOfficial(name));
+        Assert.Equal(official, Structure.IsOfficial(name));
+    }
 }

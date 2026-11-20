@@ -113,6 +113,46 @@ public class RedactTests : IDisposable
     }
 
     [Fact]
+    public void Names_are_hidden_in_the_json_report_too()
+    {
+        Redact.Enable();
+        Redact.AddPlayer("Zo\u00eb");
+        // System.Text.Json writes the name as Zo\u00EB and the apostrophe as \u0027.
+        string json = JsonSerializer.Serialize("Zo\u00eb's ship");
+        Assert.Equal("\"<player>\\u0027s ship\"", Redact.Apply(json));
+    }
+
+    [Fact]
+    public void Solo_log_waits_for_the_second_character_name()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"sfsh-test-{Guid.NewGuid():N}.log");
+        try
+        {
+            Redact.Enable();
+            Redact.ExpectPlayers(2);
+            Log.Open(path, toConsole: false);
+            Redact.AddPlayer("Kestrel");
+            Log.Write(@"reading C:\Archive\Merganser\Save4.sfs");
+            Redact.AddPlayer("Merganser");
+            Log.Write("parsed: Merganser level 2");
+            Log.Close();
+            string text = File.ReadAllText(path);
+            Assert.DoesNotContain("Merganser", text);
+            Assert.Contains(@"reading C:\Archive\<player>\Save4.sfs", text);
+        }
+        finally { Log.Close(); File.Delete(path); }
+    }
+
+    [Fact]
+    public void A_log_file_that_cannot_be_opened_is_a_usage_error()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"sfsh-missing-{Guid.NewGuid():N}", "x.log");
+        var e = Assert.Throws<UserError>(() => Log.Open(path, toConsole: false));
+        Assert.Contains(path, e.Message);
+        Log.Close();
+    }
+
+    [Fact]
     public void Reset_turns_redaction_off_and_forgets_the_rules()
     {
         Redact.Enable();

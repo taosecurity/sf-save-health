@@ -32,13 +32,8 @@ public sealed record PluginList(string Path, List<(string Name, bool Active)> En
 /// unless the list names them without "*".</summary>
 public static class ModList
 {
-    public static bool IsOfficial(string name) =>
-        name.Equals("Starfield.esm", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("Constellation.esm", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("OldMars.esm", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("ShatteredSpace.esm", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("BlueprintShips-", StringComparison.OrdinalIgnoreCase) ||
-        name.StartsWith("SFBGS", StringComparison.OrdinalIgnoreCase);
+    /// <summary>The same list as S3 uses (<see cref="Structure.IsOfficial"/>), so a plugin is official in every rule.</summary>
+    public static bool IsOfficial(string name) => Structure.IsOfficial(name);
 
     public static List<RuleResult> Run(SaveContext ctx, PluginList list)
     {
