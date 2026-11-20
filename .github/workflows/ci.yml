@@ -1,0 +1,74 @@
+# Runs the unit tests on Windows and Linux, builds the Release publish folder that the release zip is made from, and
+# checks that the program starts and gives the documented exit codes for bad input. The tests make every file they need
+# in a temp folder, so no game, no Data folder and no real save is needed.
+#
+# The parser, sf-save-reader, is a git submodule in external/sf-save-reader, so the checkout fetches submodules.
+# BuildKit (which brings Mutagen) must come from NuGet as the package Taosecurity.Starfield.BuildKit at an exact
+# version. While src/SaveHealth.csproj still points at a local BuildKit project, this workflow can't build.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+      - name: Unit tests
+        run: dotnet test tests/SfSaveHealth.Tests -c Release
+      - name: Release publish (what the zip is made from)
+        run: dotnet publish src/SaveHealth.csproj -c Release -f net9.0 --self-contained false -o publish
+      - name: The program starts and gives the documented exit codes
+        run: |
+          set -u
+          run() { dotnet publish/sf-save-health.dll "$@"; }
+          expect() { want=$1; shift; set +e; run "$@" > out.txt 2>&1; got=$?; set -e
+                     cat out.txt; echo "exit $got (expected $want)"; [ "$got" -eq "$want" ]; }
+          # Exit codes: 0 healthy, 1 warnings or notes only, 2 problems, 3 couldn't check.
+          expect 3                                   # no command: usage, exit 3
+          grep -q "^usage: sf-save-health " out.txt
+          expect 3 --help
+          grep -q "^usage: sf-save-health " out.txt
+          expect 3 frobnicate save.sfs               # an unknown command
+          grep -q "^unknown command frobnicate" out.txt
+          mkdir -p data
+          expect 3 check missing.sfs --data data     # a save that doesn't exist
+          grep -q "^error: no save file missing.sfs" out.txt   # each grep on its own line: bash -e ignores a failing grep in an && list
+          grep -q "^  fix: " out.txt
+          printf 'not a save' > notasave.sfs
+          expect 3 check notasave.sfs --data data    # a file that isn't a save
+          grep -q "^error" out.txt
+          expect 3 check notasave.sfs --data no-such-folder
+          expect 3 check notasave.sfs                # no Starfield here, so the automatic Data search finds nothing
+          grep -q "^error: couldn't find the Starfield Data folder" out.txt
+          expect 3 solo --before notasave.sfs        # a pair needs both saves
+          grep -q "^error: solo with saves needs both" out.txt
+          expect 3 solo missing.zip --data data      # a log zip that doesn't exist
+          # --redact hides the profile folder and the user name in errors and in the log
+          prof="${USERPROFILE:-$HOME}"
+          user="${USERNAME:-${USER:-$(whoami)}}"
+          expect 3 check "$prof/missing-save.sfs" --data data
+          grep -qF "$prof" out.txt                   # without --redact the path is shown
+          expect 3 check "$prof/missing-save.sfs" --data data --redact --log redact.log
+          if grep -qF "$prof" out.txt redact.log; then echo "--redact left the profile folder in"; exit 1; fi
+          if grep -qiw "$user" out.txt redact.log; then echo "--redact left the user name in"; exit 1; fi
+          grep -q "missing-save.sfs" redact.log      # the log was written

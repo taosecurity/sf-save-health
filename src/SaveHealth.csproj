@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- sf-save-health: checks a Starfield save against the installed plugins and reports what looks broken.
+       GPL-3.0 (it will use Mutagen 0.54.4 through BuildKit for the quest checks). Read-only: saves are never written. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>sf-save-health</AssemblyName>
+    <Product>sf-save-health</Product>
+    <Description>Checks a Starfield save against the installed plugins and reports what looks broken. Read-only.</Description>
+    <RootNamespace>SaveHealth</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>0.7.0</Version>
+  </PropertyGroup>
+
+  <!-- The parser: the public sf-save-reader (GPL-3.0), a git submodule in external\sf-save-reader pinned at v0.1.2.
+       Clone with the recursive option of git clone (or run git submodule update with init) so this path exists. No copied code. -->
+  <ItemGroup>
+    <ProjectReference Include="..\external\sf-save-reader\SfsReader.csproj" />
+  </ItemGroup>
+
+  <!-- The unit tests (tests\SfSaveHealth.Tests) reach a few internal helpers, such as Redact.Reset. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SfSaveHealth.Tests" />
+  </ItemGroup>
+
+  <!-- Mutagen.Bethesda.Starfield 0.54.4 comes through BuildKit (exact pin), as in sfmodcheck. Its GameData opens plugins
+       with the right light/medium master flags; the quest checks use its link cache. -->
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\tools\BuildKit\BuildKit.csproj" />
+  </ItemGroup>
+
+</Project>

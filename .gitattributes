@@ -1,0 +1,6 @@
+# Text files are stored with LF line endings and checked out with the system's own endings.
+* text=auto
+
+# Shell scripts and checksum files keep LF everywhere, so bash and sha256sum read them on Windows too.
+*.sh eol=lf
+*.sha256 eol=lf

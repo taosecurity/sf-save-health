@@ -1,0 +1,9 @@
+# Build output
+bin/
+obj/
+publish/
+
+# Saves, logs and reports never belong in the repository
+*.sfs
+*.log
+sf-save-health-reports/
