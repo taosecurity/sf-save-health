@@ -32,6 +32,8 @@
        with the right light/medium master flags; the quest checks use its link cache. -->
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- On CI (GitHub Actions sets CI=true) a lock file that doesn't match fails the restore instead of being rewritten. -->
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Taosecurity.Starfield.BuildKit" Version="[0.4.1]" />

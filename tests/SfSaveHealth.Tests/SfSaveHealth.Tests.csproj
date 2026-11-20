@@ -9,6 +9,8 @@
     <IsPackable>false</IsPackable>
     <InvariantGlobalization>true</InvariantGlobalization>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- On CI (GitHub Actions sets CI=true) a lock file that doesn't match fails the restore instead of being rewritten. -->
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>

@@ -183,7 +183,7 @@ public static class Solo
         }
         foreach (var p in a.Quests.Where(p => b.Quests.All(q => q.FormId != p.FormId)))
             changes.Add($"  gone     {p.Label} (was {Describe(p)}; the game dropped its change record)");
-        int show = Math.Max(limit * 4, 40);
+        int show = (int)Math.Min(Math.Max((long)limit * 4, 40), int.MaxValue); // long math: a huge --limit can't overflow
         sb.AppendLine();
         sb.AppendLine($"Quests that changed: {changes.Count}");
         const string Mark = "\u0001QUESTS\u0001";

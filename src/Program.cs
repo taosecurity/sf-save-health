@@ -57,17 +57,26 @@ try
             string report = Path.Combine(dir, Redact.FileName(name) + ".txt");
             // The check ran and its report is printed above, so a failed saved copy is reported on stderr
             // but doesn't hide the verdict: the exit code stays 0, 1 or 2.
+            // Only the save itself is guarded here, so a later failure (stdout or the log) isn't reported as a failed save.
+            string? saveError = null;
             try
             {
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(report, Redact.Apply(o.FullText));
-                Console.WriteLine(Redact.Apply($"Report saved to {report}"));
-                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {e.Message}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
-                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {e.Message}");
+                saveError = e.Message;
+            }
+            if (saveError is null)
+            {
+                Console.WriteLine(Redact.Apply($"Report saved to {report}"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
+            }
+            else
+            {
+                Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
             }
             return o.ExitCode;
         }
@@ -130,7 +139,9 @@ int Limit()
     string? given = Option("--limit");
     if (given is null) return 10;
     if (!int.TryParse(given, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n))
-        throw new UserError($"--limit {given} is not a number from 0 up", "pass --limit with a number of examples, for example --limit 50");
+        throw given.Length > 0 && given.All(char.IsAsciiDigit)
+            ? new UserError($"--limit {given} is too large (at most {int.MaxValue})", "pass a smaller number, for example --limit 50")
+            : new UserError($"--limit {given} is not a number from 0 up", "pass --limit with a number of examples, for example --limit 50");
     return n;
 }
 
