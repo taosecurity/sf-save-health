@@ -63,16 +63,17 @@ public static class Log
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { verbose = false; }
     }
 
-    // The note leaves out the exception's message: it usually holds the log's full path, which --redact may not be
-    // able to hide yet. The type is enough to tell a full disk from a missing drive in a bug report.
+    /// <summary>How many times writing the log failed (for tests).</summary>
     internal static int Failures { get; private set; }
 
+    // The note leaves out the exception's message: it usually holds the log's full path, which --redact may not be
+    // able to hide yet. The type and HResult (0x80070070 = disk full, 0x80070015 = drive not ready) say what happened.
     static void Failed(Exception e)
     {
         try { file?.Dispose(); } catch (Exception) { }
         file = null;
         Failures++;
-        try { Console.Error.WriteLine($"note: the log file couldn't be written ({e.GetType().Name}), so some log lines are missing; the result and exit code are not affected"); }
+        try { Console.Error.WriteLine($"note: the log file couldn't be written ({e.GetType().Name} 0x{e.HResult:X8}), so some log lines are missing; the result and exit code are not affected"); }
         catch (Exception) { }
     }
 }

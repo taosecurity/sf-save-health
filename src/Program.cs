@@ -109,14 +109,15 @@ catch (Exception e)
 }
 finally { Log.Close(); }
 
-// The value after an option, or null when the option isn't given. An option given without a value (last, or followed by
-// another --option) is a usage error.
 // A console write that must not end the run: a closed or full stdout/stderr only loses that line.
 static void BestEffort(Action write)
 {
     try { write(); }
     catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }
 }
+
+// The value after an option, or null when the option isn't given. An option given without a value (last, or followed by
+// another --option) is a usage error.
 
 string? Option(string name)
 {
