@@ -187,7 +187,8 @@ public static class QuestRules
     /// them, so the verdict and exit code still see every quest (with --limit 0, only that finding).</summary>
     internal static void Cap(List<Finding> findings, int limit, string rule, string what)
     {
-        int keep = limit * 10;
+        // In long, so a huge --limit can't overflow into a negative count.
+        int keep = (int)Math.Min((long)limit * 10, int.MaxValue);
         if (findings.Count <= keep) return;
         int more = findings.Count - keep;
         findings.RemoveRange(keep, more);

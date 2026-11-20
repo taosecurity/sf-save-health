@@ -72,6 +72,7 @@ public class PluginTests
     [Theory]
     [InlineData(0, 1, 3)]     // --limit 0: one finding that counts all three, so the exit code still sees them
     [InlineData(1, 3, 0)]     // limit x 10 = 10 kept: nothing to count
+    [InlineData(int.MaxValue, 3, 0)] // a huge --limit: limit x 10 must not overflow into a negative count
     public void Q2_and_Q3_keep_every_quest_in_the_count(int limit, int kept, int more)
     {
         var findings = Enumerable.Range(0, 3).Select(i => new Finding("Q2", Level.Warning, Reliability.Exact, $"{i:X8}", $"quest {i}", "m", [])).ToList();

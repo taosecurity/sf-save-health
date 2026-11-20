@@ -55,17 +55,20 @@ try
             Console.Write(Redact.Apply(o.Text));
             string name = pair ? Path.GetFileNameWithoutExtension(after!) + "-solo" : Path.GetFileNameWithoutExtension(args[1]);
             string report = Path.Combine(dir, Redact.FileName(name) + ".txt");
+            // The check ran and its report is printed above, so a failed saved copy is reported on stderr
+            // but doesn't hide the verdict: the exit code stays 0, 1 or 2.
             try
             {
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(report, Redact.Apply(o.FullText));
+                Console.WriteLine(Redact.Apply($"Report saved to {report}"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                throw new UserError($"couldn't save the report to {report}: {e.Message}", "pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)");
+                Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {e.Message}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)"));
+                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {e.Message}");
             }
-            Console.WriteLine(Redact.Apply($"Report saved to {report}"));
-            Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
             return o.ExitCode;
         }
         default:
