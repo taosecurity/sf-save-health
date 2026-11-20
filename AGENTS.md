@@ -66,7 +66,7 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
    `sf-save-health check "<save.sfs>" --json`
 4. More examples per finding (default 10):
    `sf-save-health check "<save.sfs>" --limit 50`
-   `--limit` takes a whole number from 0 up. Rules Q2 and Q3 list one finding per quest, up to 10 times the limit; the rest become one `... N more quest(s)` finding, so the exit code still counts them.
+   `--limit` takes a whole number from 0 up to 2147483647. Rules Q2 and Q3 list one finding per quest, up to 10 times the limit; the rest become one `... N more quest(s)` finding, so the exit code still counts them.
 5. What changed between a save made before a test and one made after it:
    `sf-save-health solo --before "<a.sfs>" --after "<b.sfs>"`
 6. The same from an sf-log-collector zip that holds `saves\before-*` and `saves\after-*`:
@@ -91,7 +91,7 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: usage error (including `--help`, an unknown command, an option given without its value, or a `--limit` that isn't a number from 0 up), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: usage error (including `--help`, an unknown command, an option given without its value, or a `--limit` that isn't a number from 0 up or is larger than 2147483647), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
 If `solo` can't save its full report into `--reports`, it prints an `error:` line on stderr but still exits 0, 1 or 2, because the check ran and the report was printed on stdout.
 
