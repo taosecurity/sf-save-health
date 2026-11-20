@@ -39,7 +39,7 @@ public static class Log
     {
         Flush();
         try { file?.Dispose(); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Failed(e); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { Failed(e); }
         file = null;
         verbose = false;
     }
@@ -63,11 +63,12 @@ public static class Log
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException) { verbose = false; }
     }
 
-    /// <summary>How many times writing the log failed (for tests).</summary>
+    /// <summary>How many times writing the log failed in this process, never reset (tests compare before and after).</summary>
     internal static int Failures { get; private set; }
 
     // The note leaves out the exception's message: it usually holds the log's full path, which --redact may not be
-    // able to hide yet. The type and HResult (0x80070070 = disk full, 0x80070015 = drive not ready) say what happened.
+    // able to hide yet. The type and HResult hint at the cause (on Windows, for example 0x80070070 or 0x80070027 for a
+    // full disk, 0x80070015 or 0x80070037 for a missing drive; on Linux and macOS the value is the errno).
     static void Failed(Exception e)
     {
         try { file?.Dispose(); } catch (Exception) { }

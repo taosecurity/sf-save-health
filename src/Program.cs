@@ -118,7 +118,6 @@ static void BestEffort(Action write)
 
 // The value after an option, or null when the option isn't given. An option given without a value (last, or followed by
 // another --option) is a usage error.
-
 string? Option(string name)
 {
     int i = Array.IndexOf(args, name);
