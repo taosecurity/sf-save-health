@@ -1,0 +1,23 @@
+sf-save-health
+Copyright (C) 2026 Richard Bejtlich
+
+sf-save-health is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+License version 3, as published by the Free Software Foundation (see LICENSE). It comes with no warranty.
+
+Third-party material
+--------------------
+
+sf-save-reader (external/sf-save-reader, a git submodule; sf-save-reader.dll and sf-save-reader.exe in the release zip)
+    The save reader, by Richard Bejtlich, under the MIT License (https://github.com/taosecurity/sf-save-reader). Its
+    license text is in external/sf-save-reader/LICENSE, and in licenses/sf-save-reader-LICENSE.txt in the release zip.
+
+Libraries (not included in the source; downloaded from nuget.org at build time, and included as DLLs in the release zip)
+    Mutagen.Bethesda.Starfield and its Mutagen dependencies (Mutagen.Bethesda.Core, Mutagen.Bethesda.Kernel, Loqui,
+        Noggog.CSharpExt), by Noggog and the Mutagen contributors, GPL-3.0 (https://github.com/Mutagen-Modding/Mutagen).
+    Taosecurity.Starfield.BuildKit, by Richard Bejtlich, GPL-3.0 (https://github.com/taosecurity/BuildKit).
+    Other packages that Mutagen uses (for example GameFinder, K4os.Compression.LZ4, SharpZipLib, System.Reactive,
+        ValveKeyValue) each carry their own license, listed on their nuget.org pages.
+    The release zip needs the .NET runtime, which is not included (MIT license, https://github.com/dotnet/runtime).
+
+sf-save-health holds no Bethesda game files or game code. It reads the official masters and your mods from your own
+game installation when it runs, and it only reads saves.

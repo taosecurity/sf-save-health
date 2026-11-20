@@ -205,4 +205,4 @@ For a bug report, run the command again with `--log sf-save-health.log --redact`
 
 ## License
 
-GPL-3.0, see [LICENSE](LICENSE).
+GPL-3.0, see [LICENSE](LICENSE). The parts by other people, and sf-save-reader's MIT license, are listed in [NOTICE](NOTICE).
