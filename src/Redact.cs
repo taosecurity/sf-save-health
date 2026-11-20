@@ -15,8 +15,9 @@ public static class Redact
     static readonly List<(Regex Pattern, string With)> rules = [];
 
     /// <summary>Starfield save names: Save12_143C1F9E M 536F6C6F _ ... (player ID, sex, the name in hex, then the rest).
-    /// The hex name is hidden even before the save is read.</summary>
-    static readonly Regex SaveNameHex = new(@"(?<=(?:Save|Autosave|Quicksave|Exitsave)\d*_[0-9A-Fa-f]{8}[MFmf]?)[0-9A-Fa-f]{2,}(?=_)",
+    /// Some saves have "_" instead of the sex letter (Save3_143C1F9E_536F6C6F_...). The hex name is hidden even before
+    /// the save is read.</summary>
+    static readonly Regex SaveNameHex = new(@"(?<=(?:Save|Autosave|Quicksave|Exitsave)\d*_[0-9A-Fa-f]{8}[MFmf_]?)[0-9A-Fa-f]{2,}(?=_)",
         RegexOptions.CultureInvariant);
 
     public static bool On => on;

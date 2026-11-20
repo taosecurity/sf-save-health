@@ -41,6 +41,8 @@ public class RedactTests : IDisposable
 
     [Theory]
     [InlineData("Save12_143C1F9EM536F6C6F_000123_Ship.sfs", "Save12_143C1F9EM<name>_000123_Ship.sfs")]
+    [InlineData("Save3_143C1F9E_536F6C6F_000024_20261029193005_1_0_4.sfs", "Save3_143C1F9E_<name>_000024_20261029193005_1_0_4.sfs")]
+    [InlineData("Autosave1_143C1F9E_536F6C6F_000218_x.sfs", "Autosave1_143C1F9E_<name>_000218_x.sfs")]
     // F is both the sex letter and a hex digit, so it goes with the hidden name; the name is hidden either way.
     [InlineData("Autosave5_0000000AF4B6573_x.sfs", "Autosave5_0000000A<name>_x.sfs")]
     [InlineData("Quicksave0_0000000A536F6C6F_x.sfs", "Quicksave0_0000000A<name>_x.sfs")]
