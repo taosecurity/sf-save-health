@@ -8,11 +8,15 @@ internal sealed class CommandLine(string[] args)
 
     public bool Has(string name) => Array.IndexOf(Args, name) >= 0;
 
-    /// <summary>An option given more than once is a usage error, so a second value is never silently ignored
-    /// (before 0.7.1 the first one was used).</summary>
+    /// <summary>The options that take a value. Every other option is an on/off switch.</summary>
+    public static readonly string[] Valued = ["--log", "--limit", "--lang", "--plugins", "--reports", "--data", "--before", "--after"];
+
+    /// <summary>An option that takes a value, given more than once, is a usage error, so a second value is never
+    /// silently ignored (before 0.7.1 the first one was used). A switch given twice (--verbose --verbose) means the
+    /// same as once and is accepted.</summary>
     public void RefuseRepeats()
     {
-        var repeated = Args.Where(a => a.StartsWith("--", StringComparison.Ordinal))
+        var repeated = Args.Where(a => Array.IndexOf(Valued, a) >= 0)
             .GroupBy(a => a, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1);
         if (repeated is not null)
             throw new UserError($"{repeated.Key} is given {repeated.Count()} times", $"give {repeated.Key} only once");

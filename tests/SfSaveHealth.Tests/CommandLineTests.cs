@@ -73,14 +73,35 @@ public class CommandLineTests : IDisposable
     [Theory]
     [InlineData("check", "x.sfs", "--limit", "5", "--limit", "50")]
     [InlineData("check", "x.sfs", "--log", "a.log", "--json", "--log", "b.log")]
-    [InlineData("check", "x.sfs", "--json", "--json")]
+    [InlineData("check", "x.sfs", "--lang", "en", "--lang", "de")]
+    [InlineData("check", "x.sfs", "--plugins", "a.txt", "--plugins", "b.txt")]
+    [InlineData("check", "x.sfs", "--data", "D", "--data", "E")]
+    [InlineData("solo", "x.zip", "--reports", "a", "--reports", "b")]
     [InlineData("solo", "--before", "a.sfs", "--after", "b.sfs", "--before", "c.sfs")]
-    public void An_option_given_twice_is_a_usage_error(params string[] args)
+    [InlineData("solo", "--before", "a.sfs", "--after", "b.sfs", "--after", "c.sfs")]
+    public void An_option_with_a_value_given_twice_is_a_usage_error(params string[] args)
     {
         var e = Assert.Throws<UserError>(() => Cl(args).RefuseRepeats());
         string name = args.GroupBy(a => a).First(g => g.Key.StartsWith("--") && g.Count() > 1).Key;
         Assert.Equal($"{name} is given 2 times", e.Message);
         Assert.Equal($"give {name} only once", e.Fix);
+    }
+
+    [Theory]
+    [InlineData("check", "x.sfs", "--json", "--json")]
+    [InlineData("check", "x.sfs", "--verbose", "--verbose")]
+    [InlineData("check", "x.sfs", "--redact", "--json", "--redact")]
+    public void A_switch_given_twice_is_accepted(params string[] args)
+    {
+        // An on/off switch has no value to lose, so giving it twice means the same as once.
+        Cl(args).RefuseRepeats();
+    }
+
+    [Fact]
+    public void Every_valued_option_is_in_the_list()
+    {
+        // Option() and Value() are only ever asked about these names; a new valued option must join the list.
+        Assert.Equal(["--log", "--limit", "--lang", "--plugins", "--reports", "--data", "--before", "--after"], CommandLine.Valued);
     }
 
     [Fact]
@@ -109,6 +130,53 @@ public class CommandLineTests : IDisposable
         Assert.Contains("error: --log is given 2 times", err);
         Assert.Contains("fix: give --log only once", err);
         Assert.False(File.Exists(first));
+    }
+
+    [Fact]
+    public void An_unknown_command_is_reported_before_a_repeated_option()
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain(["chek", "save.sfs", "--data", "D", "--data", "E", "--log", log]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command chek", err);
+        Assert.DoesNotContain("given 2 times", err);
+        Assert.False(File.Exists(log));   // a refused run writes no log
+    }
+
+    [Fact]
+    public void An_unknown_command_message_is_redacted()
+    {
+        // The command word is the user's own text: under --redact a profile folder in it is hidden like anywhere else.
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var (code, err) = RunMain([Path.Combine(profile, "x.sfs"), "check", "--redact"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command", err);
+        Assert.DoesNotContain(profile, err);
+    }
+
+    [Fact]
+    public void A_repeated_switch_runs_as_before()
+    {
+        // --json twice is not refused: the run goes on to the save, which doesn't exist here.
+        var (code, err) = RunMain(["check", "no-such-save.sfs", "--json", "--json", "--data", "."]);
+        Assert.Equal(3, code);
+        Assert.DoesNotContain("given 2 times", err);
+    }
+
+    [Fact]
+    public void A_report_that_cannot_be_written_blames_the_output_not_the_save()
+    {
+        var old = Console.Out;
+        Console.SetOut(new ClosedWriter());
+        try
+        {
+            var e = Assert.Throws<UserError>(() => Output.WriteReport("a report"));
+            Assert.Equal("couldn't write the report to the output: The pipe has been ended.", e.Message);
+            Assert.Contains("piped or redirected", e.Fix);
+            Assert.DoesNotContain("save", e.Message + e.Fix);
+        }
+        finally { Console.SetOut(old); }
     }
 
     [Fact]
@@ -159,7 +227,7 @@ public class CommandLineTests : IDisposable
     [InlineData("--help", "x")]                         // the usage text
     [InlineData("frob", "x.sfs")]                       // an unknown command
     [InlineData("check", "x.sfs", "--limit", "ten")]    // a UserError
-    [InlineData("check", "x.sfs", "--json", "--json")]  // a repeated option
+    [InlineData("check", "x.sfs", "--log", "a", "--log", "b")]  // a repeated option
     public void A_closed_error_stream_keeps_exit_3(params string[] args)
     {
         var (code, _) = RunMain(args, new ClosedWriter());

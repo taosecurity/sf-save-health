@@ -141,7 +141,7 @@ sf-save-health check <save.sfs> [--data <folder>|auto] [--plugins <plugins.txt>]
 | `--redact` | Hides the character name, the Windows user name, the computer name and your profile folder (below). |
 | `--log <file>`, `--verbose` | A troubleshooting log (below). |
 
-Each option may be given once. An option given twice, such as `--limit 5 --limit 50`, is a usage error (exit code 3) that names the option.
+An option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, and for `solo` also `--reports`, `--before` and `--after`) may be given once. Given twice, such as `--limit 5 --limit 50`, it is a usage error (exit code 3) that names the option. A switch such as `--json`, `--redact` or `--verbose` given twice means the same as once.
 
 ### `solo`: what changed between a save before a test and one after it
 
@@ -221,7 +221,7 @@ For Q2 and Q3 the tool reads every version of each quest (the original and every
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: a usage error (such as an option given twice), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: a usage error (such as an option with a value given twice), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
 If `solo` can't save its full report into the `--reports` folder, it prints an `error:` line but still exits 0, 1 or 2, because the check ran and the report was printed.
 

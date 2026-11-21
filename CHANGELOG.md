@@ -2,12 +2,9 @@
 
 ## 0.7.1 (2026-11-20)
 
-### What's changed
+### What's new
 
-- An option given twice, such as `--limit 5 --limit 50`, is now a usage error (exit code 3) that names the option. Before, the first value was used and the second was silently ignored.
-- When the error stream is closed (for example a pipe whose reader has gone), the usage text and error messages are skipped quietly, and the run still ends with exit code 3 instead of crashing.
-- A comment about the log's failure note now says which error codes come from the system on Linux and macOS.
-- New tests cover `--limit`, repeated options, a log that can't be flushed when it closes, and a closed error stream.
+This release tightens the command line and the error messages. An option that takes a value, given twice, is now refused instead of quietly using the first value, and a few error paths now say what really went wrong.
 
 ### Example
 
@@ -16,6 +13,16 @@
       fix: give --limit only once
 
 The run ends with exit code 3. The output was checked on 2026-11-20 with the 0.7.1 build.
+
+### Fixes
+
+- An option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, `--reports`, `--before`, `--after`), given twice, is now a usage error (exit code 3) that names the option. Before, the first value was used and the second was silently ignored.
+- A switch given twice (`--json --json`, `--redact --redact`, `--verbose --verbose`) means the same as once and runs as before.
+- An unknown command is reported as an unknown command, even when the rest of the command line also has a repeated option. A refused run writes no log.
+- If the report itself can't be written to the output (for example a full disk behind a redirect), the error now says so instead of saying the save couldn't be read.
+- The usage text and error messages are written on a best-effort basis: if a write to the error stream fails, that line is skipped and the run still ends with exit code 3.
+- A comment about the log's failure note now says which error codes come from the system on Linux and macOS.
+- New tests cover `--limit`, repeated options and switches, an unknown command with a repeated option, a report that can't be written, a log that can't be flushed when it closes, and a failing error stream.
 
 ### Download
 

@@ -28,10 +28,17 @@ var cl = new CommandLine(args);
 if (cl.Has("--redact")) Redact.Enable();
 try
 {
-    // Before --log is opened, so a second --log can't be silently ignored.
+    // The command name first (an unknown command is the error to report), then repeated options; both before --log
+    // is opened, so a refused run writes no log and a second --log can't be silently ignored.
+    string command = args[0].ToLowerInvariant();
+    if (command is not ("check" or "solo"))
+    {
+        BestEffort(() => Console.Error.WriteLine(Redact.Apply($"unknown command {args[0]} (try: sf-save-health check <save.sfs>, or sf-save-health solo <StarfieldLogs-*.zip>)")));
+        return 3;
+    }
     cl.RefuseRepeats();
     Log.Open(cl.Option("--log"), cl.Has("--verbose"));
-    switch (args[0].ToLowerInvariant())
+    switch (command)
     {
         case "check":
         {
@@ -41,7 +48,7 @@ try
             if (cl.Option("--plugins") is { } pl) results.AddRange(ModList.Run(ctx, PluginList.Read(pl)));
             results.AddRange(QuestRules.Run(ctx, limit));
             results.AddRange(Bloat.Run(ctx, limit));
-            Console.Write(Redact.Apply(cl.Has("--json") ? Report.Json(ctx, results) + "\n" : Report.Text(ctx, results)));
+            Output.WriteReport(Redact.Apply(cl.Has("--json") ? Report.Json(ctx, results) + "\n" : Report.Text(ctx, results)));
             int code = Report.ExitCode(results);
             Log.Write($"done: {Report.Verdict(results)} exit {code}");
             return code;
@@ -58,7 +65,7 @@ try
             Redact.ExpectPlayers(2);
             var o = pair ? Solo.RunPair(before!, after!, DataFolder(), cl.Option("--lang") ?? "en", limit)
                          : Solo.Run(args[1], DataFolder(), cl.Option("--lang") ?? "en", limit);
-            Console.Write(Redact.Apply(o.Text));
+            Output.WriteReport(Redact.Apply(o.Text));
             string name = pair ? Path.GetFileNameWithoutExtension(after!) + "-solo" : Path.GetFileNameWithoutExtension(args[1]);
             string report = Path.Combine(dir, Redact.FileName(name) + ".txt");
             // The check ran and its report is printed above, so a failed saved copy is reported on stderr
@@ -89,8 +96,7 @@ try
             return o.ExitCode;
         }
         default:
-            BestEffort(() => Console.Error.WriteLine($"unknown command {args[0]} (try: sf-save-health check <save.sfs>, or sf-save-health solo <StarfieldLogs-*.zip>)"));
-            return 3;
+            return 3;   // not reached: an unknown command is refused above
     }
 }
 catch (UserError e)
@@ -132,4 +138,20 @@ string DataFolder()
     return SfsReader.DataFolder.Find(Log.Write) ?? throw new UserError("couldn't find the Starfield Data folder (no Starfield.esm in the Steam or Game Pass folders)",
         "pass --data <your Starfield\\Data folder>, for example \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starfield\\Data\" (Steam) " +
         "or \"C:\\XboxGames\\Starfield\\Content\\Data\" (Game Pass), or set the STARFIELD_DATA environment variable");
+}
+
+/// <summary>Prints the report on stdout. A failed write (a full disk behind a redirect, for example; .NET already
+/// ignores a reader that has gone away) is the output's fault, not the save's, so it is a usage-style error (exit 3)
+/// that says so instead of falling into the save-reading handler.</summary>
+internal static class Output
+{
+    internal static void WriteReport(string text)
+    {
+        try { Console.Write(text); Console.Out.Flush(); }
+        catch (Exception e) when (e is IOException or ObjectDisposedException)
+        {
+            throw new UserError($"couldn't write the report to the output: {e.Message}",
+                "if you piped or redirected the output, make sure the program or file on the other end is still open and has room, then run again");
+        }
+    }
 }
