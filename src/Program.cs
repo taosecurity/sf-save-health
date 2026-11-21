@@ -148,7 +148,7 @@ internal static class Output
     internal static void WriteReport(string text)
     {
         try { Console.Write(text); Console.Out.Flush(); }
-        catch (Exception e) when (e is IOException or ObjectDisposedException)
+        catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException)
         {
             throw new UserError($"couldn't write the report to the output: {e.Message}",
                 "if you piped or redirected the output, make sure the program or file on the other end is still open and has room, then run again");
