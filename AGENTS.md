@@ -45,7 +45,7 @@ To type plain `sf-save-health` instead, add the folder to PATH for the current w
 sf-save-health --help
 ```
 
-Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report, for example `sf-save-health 0.7.0: Save3_....sfs`). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
+Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report, for example `sf-save-health 0.7.1: Save3_....sfs`). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
 
 To run the unit tests from a source clone (made-up files only, no game or saves needed): `dotnet test tests/SfSaveHealth.Tests -c Release` (expect all tests passed).
 
@@ -91,7 +91,7 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: usage error (including `--help`, an unknown command, an option given without its value, or a `--limit` that isn't a number from 0 up or is larger than 2147483647), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: usage error (including `--help`, an unknown command, an option given without its value, an option given more than once, or a `--limit` that isn't a number from 0 up or is larger than 2147483647), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
 If `solo` can't save its full report into `--reports`, it prints an `error:` line on stderr but still exits 0, 1 or 2, because the check ran and the report was printed on stdout.
 

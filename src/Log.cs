@@ -67,8 +67,10 @@ public static class Log
     internal static int Failures { get; private set; }
 
     // The note leaves out the exception's message: it usually holds the log's full path, which --redact may not be
-    // able to hide yet. The type and HResult hint at the cause (on Windows, for example 0x80070070 or 0x80070027 for a
-    // full disk, 0x80070015 or 0x80070037 for a missing drive; on Linux and macOS the value is the errno).
+    // able to hide yet. The type and HResult hint at the cause. For an IOException on Windows it is the Win32 error as
+    // an HRESULT, for example 0x80070070 or 0x80070027 for a full disk, 0x80070015 or 0x80070037 for a missing drive;
+    // on Linux and macOS it is usually the raw errno (for example 0x0000001C, ENOSPC). UnauthorizedAccessException and
+    // ObjectDisposedException carry their fixed .NET values on every system (0x80070005 and 0x80131622).
     static void Failed(Exception e)
     {
         try { file?.Dispose(); } catch (Exception) { }

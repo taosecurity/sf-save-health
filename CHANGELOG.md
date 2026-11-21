@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.1 (2026-11-20)
+
+### What's changed
+
+- An option given twice, such as `--limit 5 --limit 50`, is now a usage error (exit code 3) that names the option. Before, the first value was used and the second was silently ignored.
+- When the error stream is closed (for example a pipe whose reader has gone), the usage text and error messages are skipped quietly, and the run still ends with exit code 3 instead of crashing.
+- A comment about the log's failure note now says which error codes come from the system on Linux and macOS.
+- New tests cover `--limit`, repeated options, a log that can't be flushed when it closes, and a closed error stream.
+
+### Example
+
+    > sf-save-health check "Save3_....sfs" --limit 5 --limit 50
+    error: --limit is given 2 times
+      fix: give --limit only once
+
+The run ends with exit code 3. The output was checked on 2026-11-20 with the 0.7.1 build.
+
+### Download
+
+Download `sf-save-health-0.7.1.zip` and its `.sha256` file below, and follow the Install steps in the README.
+
 ## 0.7.0 (2026-11-20)
 
 ### What's new
