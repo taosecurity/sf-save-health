@@ -23,7 +23,12 @@ The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7
 - Every option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, `--reports`, `--before`, `--after`), given without one, is a usage error (exit code 3) that names the option.
 - An option the command doesn't know, such as `--plugin` or `--JSON`, is a usage error (exit code 3). Options stay case-sensitive. When the name is close to a real option, the fix line names it.
 - An option of the other command, such as `--json` with `solo` or `--reports` with `check`, is a usage error that says which command the option works with.
-- An unknown command given alone, such as `sf-save-health chek`, now says `unknown command chek` before the usage text.
+- A mistyped option of the other command, such as `--JSON` with `solo`, now says which command the option works with.
+- An unknown command given alone or with `--help`, such as `sf-save-health chek`, now says `unknown command chek` before the usage text.
+- An option before the save, such as `check --json Save3.sfs`, is a usage error that says to put the save first. Before, the option was read as the save's name.
+- `solo` with both a zip and `--before`/`--after` is a usage error. Before, the zip was silently ignored.
+- When `solo` can't print its short report (exit code 3), the error now says where the full report was saved, or that it couldn't be saved either.
+- A slip in the program's own option table is now reported as an internal error, not as a damaged plugin.
 - `--help` anywhere on the line shows the usage and runs nothing. Before, it was ignored when it wasn't first.
 - `solo` saves its full report in `--reports` before it prints the short one, so a failed write to the output (exit code 3) no longer loses the saved copy.
 - The fix line for a report that can't be written now also names room on the drive and access rights.

@@ -53,16 +53,18 @@ internal sealed class CommandLine(string[] args)
     /// new option can't be read without being in the table that the check, the usage text and the tests use.</summary>
     static void Known(string name, bool valued)
     {
-        var o = Find(name) ?? throw new InvalidOperationException($"{name} is not in CommandLine.Options");
-        if (valued && !o.TakesValue) throw new InvalidOperationException($"{name} is a switch, not an option with a value");
+        var o = Find(name) ?? throw new OptionTableError($"{name} is not in CommandLine.Options");
+        if (valued && !o.TakesValue) throw new OptionTableError($"{name} is a switch, not an option with a value");
     }
 
     /// <summary>Refuses a command line the command can't use, before anything runs: an option the command doesn't
     /// know (a mistyped one, or one that belongs to the other command) and a valued option with no value after it
-    /// (last, or followed by another --option). Options are case-sensitive. Words that don't start with -- (the save,
-    /// the zip, and the values) aren't checked here.</summary>
+    /// (last, or followed by another --option). Options are case-sensitive. Then the save or zip's place: check and
+    /// solo need it right after the command, and solo takes either a zip or --before/--after, not both. Other words
+    /// that don't start with -- (the values, extra words) aren't checked here.</summary>
     public void RefuseUnknown(string command)
     {
+        string other = command == "check" ? "solo" : "check";
         for (int i = 1; i < Args.Length; i++)
         {
             string a = Args[i];
@@ -71,16 +73,29 @@ internal sealed class CommandLine(string[] args)
             if (o is null)
                 throw new UserError($"{command} doesn't know {a}", Closest(a, command) is { } near
                     ? $"use {near} (options are case-sensitive; sf-save-health --help lists them)"
-                    : "check the spelling; sf-save-health --help lists the options");
+                    : Closest(a, other) is { } theirs
+                        ? $"{theirs} works only with {other}; sf-save-health --help lists {command}'s options"
+                        : "check the spelling; sf-save-health --help lists the options");
             if (!o.For(command))
                 throw new UserError($"{command} doesn't know {a}",
-                    $"{a} works only with {(command == "check" ? "solo" : "check")}; sf-save-health --help lists {command}'s options");
+                    $"{a} works only with {other}; sf-save-health --help lists {command}'s options");
             if (o.TakesValue)
             {
                 if (i + 1 >= Args.Length || Args[i + 1].StartsWith("--", StringComparison.Ordinal))
-                    throw new UserError($"{a} needs a value", $"put the value right after {a}, for example {a} {o.Example}");
+                    throw NeedsValue(o);
                 i++;   // the value
             }
+        }
+        bool first = Args.Length > 1 && !Args[1].StartsWith("--", StringComparison.Ordinal);
+        if (command == "check" && !first)
+            throw new UserError("check needs the save right after the command", "put the save first, for example sf-save-health check Save3.sfs --json");
+        if (command == "solo")
+        {
+            bool pair = Array.IndexOf(Args, "--before") >= 0 || Array.IndexOf(Args, "--after") >= 0;
+            if (pair && first)
+                throw new UserError($"solo got both {Args[1]} and --before/--after", "give either sf-log-collector's zip or --before <a.sfs> --after <b.sfs>, not both");
+            if (!pair && !first)
+                throw new UserError("solo needs the zip right after the command", "put the zip first, for example sf-save-health solo StarfieldLogs-1.zip, or pass --before <a.sfs> --after <b.sfs>");
         }
     }
 
@@ -124,13 +139,17 @@ internal sealed class CommandLine(string[] args)
     }
 
     /// <summary>The value after an option, or null when the option isn't given. An option given without a value (last,
-    /// or followed by another --option) is a usage error.</summary>
+    /// or followed by another --option) is a usage error. In the program RefuseUnknown has already refused that case,
+    /// so this check only guards direct callers (the tests); its message matches RefuseUnknown's.</summary>
     public string? Option(string name)
     {
         Known(name, valued: true);
         if (!Has(name)) return null;
-        return Value(name) ?? throw new UserError($"{name} needs a value", $"put the value right after {name}, for example {name} {Find(name)!.Example}");
+        return Value(name) ?? throw NeedsValue(Find(name)!);
     }
+
+    /// <summary>The one "needs a value" error, so RefuseUnknown and Option can't drift apart.</summary>
+    static UserError NeedsValue(OptionSpec o) => new($"{o.Name} needs a value", $"put the value right after {o.Name}, for example {o.Name} {o.Example}");
 
     /// <summary>The value after an option, or null when the option is missing or has no value.</summary>
     public string? Value(string name)

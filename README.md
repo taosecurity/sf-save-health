@@ -147,8 +147,10 @@ The command line is checked before anything runs, and these are usage errors (ex
 
 - An option that takes a value given without one, such as `--data` at the end of the line or followed by another option. Write `--data auto` for the automatic search.
 - An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it.
-- An option of the other command, such as `--json` with `solo` or `--reports` with `check`.
-- An unknown command, such as `chek`, which is followed by the usage text.
+- An option of the other command, such as `--json` with `solo` or `--reports` with `check`. A mistyped one, such as `--JSON` with `solo`, is named as the other command's option too.
+- An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text.
+- An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
+- `solo` with both a zip and `--before`/`--after`: give one or the other.
 - `--help` anywhere on the line, which shows the usage text and runs nothing.
 
 For example:

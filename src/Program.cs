@@ -11,8 +11,9 @@ using SaveHealth.Rules;
 // --help anywhere (sf-save-health check x.sfs --help) shows the usage instead of running.
 if (args.Length < 2 || args[0] is "-h" or "--help" or "help" || Array.IndexOf(args, "--help") >= 0)
 {
-    // A lone unknown word (sf-save-health chek) says so before the usage, as an unknown command with more after it does.
-    if (args.Length == 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help"))
+    // An unknown first word (sf-save-health chek, or chek x.sfs --help) says so before the usage, as an unknown
+    // command with more after it does.
+    if (args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help"))
         BestEffort(() => Console.Error.WriteLine($"unknown command {args[0]}"));
     BestEffort(() =>
     {
@@ -84,6 +85,14 @@ catch (UserError e)
     Log.Write($"error: {e.Message} (fix: {e.Fix})");
     return 3;
 }
+catch (OptionTableError e)
+{
+    // A programming slip (the code asks about an option the table lacks), not the save's fault: say so plainly.
+    BestEffort(() => Console.Error.WriteLine($"error: internal error in sf-save-health: {e.Message}\n" +
+        "  fix: this is a bug in sf-save-health, not in your save or mods; please report it with the command line you ran"));
+    Log.Write($"error: {e}");
+    return 3;
+}
 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
 {
     BestEffort(() => Console.Error.WriteLine(Redact.Apply($"error reading {(args[1].StartsWith("--") ? "a save" : args[1])}: {e.Message}\n  fix: if the file is in use (the game or Vortex), close it and try again; if the save is damaged, try another save")));
@@ -102,11 +111,7 @@ finally { Log.Close(); }
 
 // A console write that must not end the run or change its exit code: a closed or full stdout/stderr only loses
 // that line. Used for the usage text, the error handlers' messages and solo's closing lines.
-static void BestEffort(Action write)
-{
-    try { write(); }
-    catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }
-}
+static void BestEffort(Action write) => Output.BestEffort(write);
 
 // --data <folder> uses that folder; no --data or --data auto searches the usual places with SfsReader.DataFolder.Find.
 // A bare --data (last, or followed by another option) is refused by RefuseUnknown before this runs (since 0.7.2;
@@ -159,7 +164,14 @@ internal static class Output
             saveError = e.Message;
             Log.Write($"solo: report not saved to {report}: {e.GetType().Name}: {e.Message}");
         }
-        WriteReport(Redact.Apply(o.Text));
+        try { WriteReport(Redact.Apply(o.Text)); }
+        catch (UserError e)
+        {
+            // The printed report is lost, so the error says where the full copy is (or that it couldn't be saved).
+            throw new UserError(e.Message, e.Fix + (saveError is null
+                ? $"; the full report was saved to {report}"
+                : $"; the full report couldn't be saved to {report} either: {saveError}"));
+        }
         // The check has finished and its report is printed, so nothing from here on may change the verdict's exit
         // code: Log.Write never throws (a failing log stops with a note), and the two console lines are best effort.
         if (saveError is null)
@@ -175,7 +187,9 @@ internal static class Output
         return o.ExitCode;
     }
 
-    static void BestEffort(Action write)
+    /// <summary>A console write that must not end the run or change its exit code: a closed or full stdout/stderr
+    /// only loses that line. The one copy, used by the usage text, the error handlers and solo's closing lines.</summary>
+    internal static void BestEffort(Action write)
     {
         try { write(); }
         catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }

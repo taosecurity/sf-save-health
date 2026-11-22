@@ -38,3 +38,7 @@ public sealed class UserError(string message, string fix) : Exception(message)
 {
     public string Fix { get; } = fix;
 }
+
+/// <summary>A programming slip: the code asked about an option that CommandLine.Options lacks (or read a switch as
+/// an option with a value). Reported as an internal error, never as a problem with the save or a plugin.</summary>
+public sealed class OptionTableError(string message) : InvalidOperationException(message);

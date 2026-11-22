@@ -127,9 +127,22 @@ public class CommandLineTests : IDisposable
     [Fact]
     public void Reading_an_option_that_is_not_in_the_table_throws()
     {
-        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Has("--nosuch"));
-        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Value("--nosuch"));
-        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Option("--json"));   // a switch has no value
+        Assert.Throws<OptionTableError>(() => Cl("check", "x.sfs").Has("--nosuch"));
+        Assert.Throws<OptionTableError>(() => Cl("check", "x.sfs").Value("--nosuch"));
+        Assert.Throws<OptionTableError>(() => Cl("check", "x.sfs").Option("--json"));   // a switch has no value
+    }
+
+    [Fact]
+    public void The_option_table_slip_is_an_internal_error_not_a_save_problem()
+    {
+        // Program.cs catches OptionTableError before its general handler, which would blame a damaged plugin.
+        Assert.IsAssignableFrom<InvalidOperationException>(new OptionTableError("x"));
+        string program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Program.cs"));
+        int table = program.IndexOf("catch (OptionTableError", StringComparison.Ordinal);
+        int general = program.IndexOf("catch (Exception e)\n", StringComparison.Ordinal);
+        if (general < 0) general = program.IndexOf("catch (Exception e)\r\n", StringComparison.Ordinal);
+        Assert.True(table > 0 && general > table, "catch (OptionTableError) must come before the general catch");
+        Assert.Contains("internal error in sf-save-health", program);
     }
 
     [Fact]

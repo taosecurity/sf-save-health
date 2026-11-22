@@ -21,6 +21,7 @@ public class WriteFailureTests
         {
             var e = Assert.Throws<UserError>(() => Output.FinishSolo(Sample, dir, report));
             Assert.StartsWith("couldn't write the report to the output", e.Message);
+            Assert.EndsWith($"; the full report was saved to {report}", e.Fix);   // the user learns where the copy is
         }
         finally { Console.SetOut(old); }
         // The saved copy was written before the failed print, and holds the full report.
@@ -75,6 +76,20 @@ public class WriteFailureTests
         Assert.StartsWith($"error: couldn't save the report to {report}: ", error.ToString());
         Assert.Contains("  fix: " + Output.SaveFix, error.ToString());
         Assert.Contains($"solo: report not saved to {report}: IOException", File.ReadAllText(log));
+    }
+
+    [Fact]
+    public void A_failed_save_and_a_failed_stdout_both_reach_the_error()
+    {
+        using var d = new TempDir();
+        string dir = d.File("reports"), report = Path.Combine(dir, "x.txt");
+        var old = Console.Out;
+        Console.SetOut(new ClosedWriter());
+        UserError e;
+        try { e = Assert.Throws<UserError>(() => Output.FinishSolo(Sample, dir, report)); }
+        finally { Console.SetOut(old); }
+        Assert.StartsWith("couldn't write the report to the output", e.Message);
+        Assert.Contains($"; the full report couldn't be saved to {report} either: ", e.Fix);
     }
 
     [Fact]

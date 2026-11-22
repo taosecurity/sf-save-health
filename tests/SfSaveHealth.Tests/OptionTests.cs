@@ -115,7 +115,9 @@ public class OptionTests : IDisposable
         foreach (var o in CommandLine.Options)
             foreach (var command in new[] { "check", "solo" }.Where(o.For))
             {
-                string[] args = o.TakesValue ? [command, "x.sfs", o.Name, o.Example] : [command, "x.sfs", o.Name];
+                // solo's pair form takes no zip (a zip and a pair together are refused).
+                string[] args = o.Name is "--before" or "--after" ? [command, "--before", "a.sfs", "--after", "b.sfs"]
+                    : o.TakesValue ? [command, "x.sfs", o.Name, o.Example] : [command, "x.sfs", o.Name];
                 new CommandLine(args).RefuseUnknown(command);
             }
     }
@@ -170,6 +172,60 @@ public class OptionTests : IDisposable
         Assert.Equal(3, code);
         Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
         Assert.DoesNotContain("unknown command", err);
+    }
+
+    [Fact]
+    public void An_unknown_command_with_help_after_it_still_says_unknown_command()
+    {
+        var (code, err) = RunMain(["chek", "x.sfs", "--help"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command chek", err);
+        Assert.Contains("usage: sf-save-health check <save.sfs>", err);
+    }
+
+    // An option of the other command, mistyped.
+
+    [Theory]
+    [InlineData("solo", "--JSON", "--json works only with check")]
+    [InlineData("solo", "--plugin", "--plugins works only with check")]
+    [InlineData("check", "--report", "--reports works only with solo")]
+    public void A_mistyped_option_of_the_other_command_names_that_command(string command, string given, string fix)
+    {
+        var (code, err) = RunMain([command, "x.zip", given]);
+        Assert.Equal(3, code);
+        Assert.Contains($"error: {command} doesn't know {given}", err);
+        Assert.Contains($"fix: {fix}", err);
+    }
+
+    // The save or zip's place.
+
+    [Theory]
+    [InlineData("check", "--json", "x.sfs")]
+    [InlineData("check", "--limit", "5", "x.sfs")]
+    public void Check_with_an_option_before_the_save_exits_3(params string[] rest)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain([.. rest, "--log", log]);
+        Assert.Equal(3, code);
+        Assert.Contains("error: check needs the save right after the command", err);
+        Assert.False(File.Exists(log));
+    }
+
+    [Fact]
+    public void Solo_with_both_a_zip_and_a_pair_exits_3()
+    {
+        var (code, err) = RunMain(["solo", "x.zip", "--before", "a.sfs", "--after", "b.sfs"]);
+        Assert.Equal(3, code);
+        Assert.Contains("error: solo got both x.zip and --before/--after", err);
+    }
+
+    [Fact]
+    public void Solo_with_an_option_before_the_zip_exits_3()
+    {
+        var (code, err) = RunMain(["solo", "--limit", "5", "x.zip"]);
+        Assert.Equal(3, code);
+        Assert.Contains("error: solo needs the zip right after the command", err);
     }
 
     [Fact]
