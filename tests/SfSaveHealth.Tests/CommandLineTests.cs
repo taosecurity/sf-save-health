@@ -139,9 +139,11 @@ public class CommandLineTests : IDisposable
         Assert.IsAssignableFrom<InvalidOperationException>(new OptionTableError("x"));
         string program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Program.cs"));
         int table = program.IndexOf("catch (OptionTableError", StringComparison.Ordinal);
-        int general = program.IndexOf("catch (Exception e)\n", StringComparison.Ordinal);
-        if (general < 0) general = program.IndexOf("catch (Exception e)\r\n", StringComparison.Ordinal);
-        Assert.True(table > 0 && general > table, "catch (OptionTableError) must come before the general catch");
+        // Every catch of plain Exception (with or without a when filter, a comment or another variable name) must come
+        // after it, so the first one found is the one to compare.
+        var general = System.Text.RegularExpressions.Regex.Match(program, @"catch\s*\(\s*Exception\b");
+        Assert.True(general.Success, "Program.cs has no catch (Exception ...)");
+        Assert.True(table > 0 && general.Index > table, "catch (OptionTableError) must come before every catch (Exception ...)");
         Assert.Contains("internal error in sf-save-health", program);
     }
 

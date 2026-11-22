@@ -74,7 +74,7 @@ internal sealed class CommandLine(string[] args)
                 throw new UserError($"{command} doesn't know {a}", Closest(a, command) is { } near
                     ? $"use {near} (options are case-sensitive; sf-save-health --help lists them)"
                     : Closest(a, other) is { } theirs
-                        ? $"{theirs} works only with {other}; sf-save-health --help lists {command}'s options"
+                        ? $"did you mean {theirs}? it works only with {other} (options are case-sensitive; sf-save-health --help lists {command}'s options)"
                         : "check the spelling; sf-save-health --help lists the options");
             if (!o.For(command))
                 throw new UserError($"{command} doesn't know {a}",

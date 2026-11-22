@@ -12,9 +12,11 @@ using SaveHealth.Rules;
 if (args.Length < 2 || args[0] is "-h" or "--help" or "help" || Array.IndexOf(args, "--help") >= 0)
 {
     // An unknown first word (sf-save-health chek, or chek x.sfs --help) says so before the usage, as an unknown
-    // command with more after it does.
+    // command with more after it does. The first word is the user's own text (it can be a save path), so --redact
+    // on the line hides it here too.
+    if (Array.IndexOf(args, "--redact") >= 0) Redact.Enable();
     if (args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help"))
-        BestEffort(() => Console.Error.WriteLine($"unknown command {args[0]}"));
+        BestEffort(() => Console.Error.WriteLine(Redact.Apply($"unknown command {args[0]}")));
     BestEffort(() =>
     {
         Console.Error.WriteLine($"usage: sf-save-health check <save.sfs> {CommandLine.UsageOptions("check")}");

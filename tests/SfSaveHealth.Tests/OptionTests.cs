@@ -183,12 +183,24 @@ public class OptionTests : IDisposable
         Assert.Contains("usage: sf-save-health check <save.sfs>", err);
     }
 
+    [Fact]
+    public void An_unknown_command_with_help_after_it_is_redacted()
+    {
+        // The usage path names the first word too: under --redact a profile folder in it is hidden there as well.
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var (code, err) = RunMain([Path.Combine(profile, "x.sfs"), "--redact", "--help"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command", err);
+        Assert.Contains("usage: sf-save-health check <save.sfs>", err);
+        Assert.DoesNotContain(profile, err);
+    }
+
     // An option of the other command, mistyped.
 
     [Theory]
-    [InlineData("solo", "--JSON", "--json works only with check")]
-    [InlineData("solo", "--plugin", "--plugins works only with check")]
-    [InlineData("check", "--report", "--reports works only with solo")]
+    [InlineData("solo", "--JSON", "did you mean --json? it works only with check (options are case-sensitive")]
+    [InlineData("solo", "--plugin", "did you mean --plugins? it works only with check (options are case-sensitive")]
+    [InlineData("check", "--report", "did you mean --reports? it works only with solo (options are case-sensitive")]
     public void A_mistyped_option_of_the_other_command_names_that_command(string command, string given, string fix)
     {
         var (code, err) = RunMain([command, "x.zip", given]);
