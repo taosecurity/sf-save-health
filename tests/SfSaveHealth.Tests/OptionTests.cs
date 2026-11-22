@@ -65,11 +65,12 @@ public class OptionTests : IDisposable
     // An option the command doesn't know.
 
     [Theory]
-    [InlineData("check", "--plugin", "use --plugins")]
-    [InlineData("check", "--JSON", "use --json")]
-    [InlineData("check", "--verbos", "use --verbose")]
-    [InlineData("solo", "--report", "use --reports")]
-    [InlineData("solo", "--befor", "use --before")]
+    // The case-sensitive note comes only with a letter-case slip, not a spelling one.
+    [InlineData("check", "--plugin", "use --plugins (sf-save-health --help lists them)")]
+    [InlineData("check", "--JSON", "use --json (options are case-sensitive; sf-save-health --help lists them)")]
+    [InlineData("check", "--verbos", "use --verbose (sf-save-health --help lists them)")]
+    [InlineData("solo", "--report", "use --reports (sf-save-health --help lists them)")]
+    [InlineData("solo", "--befor", "use --before (sf-save-health --help lists them)")]
     [InlineData("check", "--frobnicate", "check the spelling; sf-save-health --help lists the options")]
     public void A_mistyped_option_exits_3_naming_it_and_the_closest_option(string command, string given, string fix)
     {
@@ -143,6 +144,7 @@ public class OptionTests : IDisposable
     public void A_mistyped_option_message_is_redacted()
     {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(profile) || profile.Length <= 3) return;   // nothing to hide on this machine
         var (code, err) = RunMain(["check", "x.sfs", "--redact", "--" + Path.Combine(profile, "x")]);
         Assert.Equal(3, code);
         Assert.Contains("doesn't know", err);
@@ -188,6 +190,7 @@ public class OptionTests : IDisposable
     {
         // The usage path names the first word too: under --redact a profile folder in it is hidden there as well.
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(profile) || profile.Length <= 3) return;   // nothing to hide on this machine
         var (code, err) = RunMain([Path.Combine(profile, "x.sfs"), "--redact", "--help"]);
         Assert.Equal(3, code);
         Assert.StartsWith("unknown command", err);
@@ -199,8 +202,8 @@ public class OptionTests : IDisposable
 
     [Theory]
     [InlineData("solo", "--JSON", "did you mean --json? it works only with check (options are case-sensitive")]
-    [InlineData("solo", "--plugin", "did you mean --plugins? it works only with check (options are case-sensitive")]
-    [InlineData("check", "--report", "did you mean --reports? it works only with solo (options are case-sensitive")]
+    [InlineData("solo", "--plugin", "did you mean --plugins? it works only with check (sf-save-health --help lists solo's options)")]
+    [InlineData("check", "--report", "did you mean --reports? it works only with solo (sf-save-health --help lists check's options)")]
     public void A_mistyped_option_of_the_other_command_names_that_command(string command, string given, string fix)
     {
         var (code, err) = RunMain([command, "x.zip", given]);

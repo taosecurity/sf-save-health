@@ -146,7 +146,7 @@ An option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log
 The command line is checked before anything runs, and these are usage errors (exit code 3) too. Each one prints an `error:` line and a `fix:` line, and writes no log:
 
 - An option that takes a value given without one, such as `--data` at the end of the line or followed by another option. Write `--data auto` for the automatic search.
-- An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it.
+- An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it (and says that options are case-sensitive when only the letter case differs).
 - An option of the other command, such as `--json` with `solo` or `--reports` with `check`. A mistyped one, such as `--JSON` with `solo`, is named as the other command's option too.
 - An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text.
 - An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
@@ -158,7 +158,7 @@ For example:
 ```
 > sf-save-health check "Save3_....sfs" --plugin Plugins.txt
 error: check doesn't know --plugin
-  fix: use --plugins (options are case-sensitive; sf-save-health --help lists them)
+  fix: use --plugins (sf-save-health --help lists them)
 ```
 
 ### `solo`: what changed between a save before a test and one after it

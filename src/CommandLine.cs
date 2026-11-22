@@ -57,6 +57,11 @@ internal sealed class CommandLine(string[] args)
         if (valued && !o.TakesValue) throw new OptionTableError($"{name} is a switch, not an option with a value");
     }
 
+    /// <summary>The "options are case-sensitive" note, only when the given name is the suggestion in other letter
+    /// case (--JSON for --json); a spelling slip (--plugin for --plugins) gets no case note.</summary>
+    static string CaseNote(string given, string near) =>
+        string.Equals(given, near, StringComparison.OrdinalIgnoreCase) ? "options are case-sensitive; " : "";
+
     /// <summary>Refuses a command line the command can't use, before anything runs: an option the command doesn't
     /// know (a mistyped one, or one that belongs to the other command) and a valued option with no value after it
     /// (last, or followed by another --option). Options are case-sensitive. Then the save or zip's place: check and
@@ -72,9 +77,9 @@ internal sealed class CommandLine(string[] args)
             var o = Find(a);
             if (o is null)
                 throw new UserError($"{command} doesn't know {a}", Closest(a, command) is { } near
-                    ? $"use {near} (options are case-sensitive; sf-save-health --help lists them)"
+                    ? $"use {near} ({CaseNote(a, near)}sf-save-health --help lists them)"
                     : Closest(a, other) is { } theirs
-                        ? $"did you mean {theirs}? it works only with {other} (options are case-sensitive; sf-save-health --help lists {command}'s options)"
+                        ? $"did you mean {theirs}? it works only with {other} ({CaseNote(a, theirs)}sf-save-health --help lists {command}'s options)"
                         : "check the spelling; sf-save-health --help lists the options");
             if (!o.For(command))
                 throw new UserError($"{command} doesn't know {a}",

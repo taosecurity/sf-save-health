@@ -138,10 +138,12 @@ public class CommandLineTests : IDisposable
         // Program.cs catches OptionTableError before its general handler, which would blame a damaged plugin.
         Assert.IsAssignableFrom<InvalidOperationException>(new OptionTableError("x"));
         string program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Program.cs"));
+        // Read the code without its // comments, so a comment that names a catch neither hides nor fakes one.
+        program = string.Join("\n", program.Split('\n').Select(l => l.TrimStart().StartsWith("//", StringComparison.Ordinal) ? "" : l));
         int table = program.IndexOf("catch (OptionTableError", StringComparison.Ordinal);
-        // Every catch of plain Exception (with or without a when filter, a comment or another variable name) must come
-        // after it, so the first one found is the one to compare.
-        var general = System.Text.RegularExpressions.Regex.Match(program, @"catch\s*\(\s*Exception\b");
+        // Every general catch (plain or System.Exception, with or without a when filter or variable name, or a bare
+        // catch) must come after it, so the first one found is the one to compare.
+        var general = System.Text.RegularExpressions.Regex.Match(program, @"\bcatch\s*(\(\s*(System\.)?Exception\b|\{)");
         Assert.True(general.Success, "Program.cs has no catch (Exception ...)");
         Assert.True(table > 0 && general.Index > table, "catch (OptionTableError) must come before every catch (Exception ...)");
         Assert.Contains("internal error in sf-save-health", program);
@@ -222,6 +224,7 @@ public class CommandLineTests : IDisposable
     {
         // The command word is the user's own text: under --redact a profile folder in it is hidden like anywhere else.
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(profile) || profile.Length <= 3) return;   // nothing to hide on this machine
         var (code, err) = RunMain([Path.Combine(profile, "x.sfs"), "check", "--redact"]);
         Assert.Equal(3, code);
         Assert.StartsWith("unknown command", err);

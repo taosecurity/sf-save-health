@@ -10,7 +10,7 @@ This release stops quietly ignoring mistakes on the command line. A mistyped opt
 
     > sf-save-health check "Save3_....sfs" --plugin Plugins.txt
     error: check doesn't know --plugin
-      fix: use --plugins (options are case-sensitive; sf-save-health --help lists them)
+      fix: use --plugins (sf-save-health --help lists them)
 
 The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7.2 build.
 
@@ -21,10 +21,10 @@ The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7
 ### Fixes
 
 - Every option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, `--reports`, `--before`, `--after`), given without one, is a usage error (exit code 3) that names the option.
-- An option the command doesn't know, such as `--plugin` or `--JSON`, is a usage error (exit code 3). Options stay case-sensitive. When the name is close to a real option, the fix line names it.
+- An option the command doesn't know, such as `--plugin` or `--JSON`, is a usage error (exit code 3). Options stay case-sensitive. When the name is close to a real option, the fix line names it, and it says that options are case-sensitive only when the letter case is the difference.
 - An option of the other command, such as `--json` with `solo` or `--reports` with `check`, is a usage error that says which command the option works with.
 - A mistyped option of the other command, such as `--JSON` with `solo`, now asks whether you meant that option (`--json`) and says which command it works with.
-- An unknown command given alone or with `--help`, such as `sf-save-health chek`, now says `unknown command chek` before the usage text. With `--redact` on the line, a save path given in its place is hidden there too.
+- An unknown command given alone or with `--help`, such as `sf-save-health chek`, now says `unknown command chek` before the usage text. With `--redact` on the line, the profile folder and the user and computer names in a path given in its place are hidden there too. The character's name in such a path stays visible, because no save is read.
 - An option before the save, such as `check --json Save3.sfs`, is a usage error that says to put the save first. Before, the option was read as the save's name.
 - `solo` with both a zip and `--before`/`--after` is a usage error. Before, the zip was silently ignored.
 - When `solo` can't print its short report (exit code 3), the error now says where the full report was saved, or that it couldn't be saved either.
