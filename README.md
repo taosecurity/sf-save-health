@@ -133,7 +133,7 @@ sf-save-health check <save.sfs> [--data <folder>|auto] [--plugins <plugins.txt>]
 
 | Option | What it does |
 |---|---|
-| `--data <folder>` | The game's Data folder to check the save against. With no `--data`, a bare `--data` or `--data auto`, the tool looks in this order: the `STARFIELD_DATA` environment variable, every Steam library, then Game Pass (`<drive>:\XboxGames\Starfield\Content\Data` on each drive). The first folder that holds `Starfield.esm` is used. |
+| `--data <folder>` | The game's Data folder to check the save against. With no `--data`, or with `--data auto`, the tool looks in this order: the `STARFIELD_DATA` environment variable, every Steam library, then Game Pass (`<drive>:\XboxGames\Starfield\Content\Data` on each drive). The first folder that holds `Starfield.esm` is used. |
 | `--plugins <file>` | Also check the save against a load order: the game's `Plugins.txt`, or a Vortex export of it (one plugin per line, turned-on plugins start with `*`). Adds rules M1 and M2. |
 | `--json` | Writes the report as one JSON object (schema `savehealth-report/1`) instead of text. |
 | `--limit N` | How many examples each finding lists (default 10). The rest are counted as "... N more". Q2 and Q3 list one finding per quest, up to 10 times N; any quests past that are counted in one more finding, so the verdict and exit code always include them. |
@@ -142,6 +142,22 @@ sf-save-health check <save.sfs> [--data <folder>|auto] [--plugins <plugins.txt>]
 | `--log <file>`, `--verbose` | A troubleshooting log (below). |
 
 An option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, and for `solo` also `--reports`, `--before` and `--after`) may be given once. Given twice, such as `--limit 5 --limit 50`, it is a usage error (exit code 3) that names the option. A switch such as `--json`, `--redact` or `--verbose` given twice means the same as once.
+
+The command line is checked before anything runs, and these are usage errors (exit code 3) too. Each one prints an `error:` line and a `fix:` line, and writes no log:
+
+- An option that takes a value given without one, such as `--data` at the end of the line or followed by another option. Write `--data auto` for the automatic search.
+- An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it.
+- An option of the other command, such as `--json` with `solo` or `--reports` with `check`.
+- An unknown command, such as `chek`, which is followed by the usage text.
+- `--help` anywhere on the line, which shows the usage text and runs nothing.
+
+For example:
+
+```
+> sf-save-health check "Save3_....sfs" --plugin Plugins.txt
+error: check doesn't know --plugin
+  fix: use --plugins (options are case-sensitive; sf-save-health --help lists them)
+```
 
 ### `solo`: what changed between a save before a test and one after it
 
@@ -221,9 +237,11 @@ For Q2 and Q3 the tool reads every version of each quest (the original and every
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: a usage error (such as an option with a value given twice), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: a usage error (an unknown command, an option the command doesn't know, an option given without its value or given twice, or `--help`; see Commands), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
-If `solo` can't save its full report into the `--reports` folder, it prints an `error:` line but still exits 0, 1 or 2, because the check ran and the report was printed.
+If `solo` can't save its full report into the `--reports` folder, it prints an `error:` line but still exits 0, 1 or 2, because the check ran and the report was printed. The fix line asks you to check that the folder's drive has room and that you may write there, or to pass `--reports` with another folder.
+
+`solo` saves its full report before it prints the short one. So if printing fails (exit code 3, for example a full disk behind a redirect), the saved report is still there.
 
 ## Privacy: `--redact`
 

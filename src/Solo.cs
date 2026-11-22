@@ -26,9 +26,17 @@ public static class Solo
             var b = Check(after, dataDir, language, limit);
             return Compare(Path.GetFileName(zipPath), a, b, limit);
         }
-        finally
+        finally { RemoveTemp(tmp); }
+    }
+
+    /// <summary>Best-effort removal of solo's temporary folder: a file another program holds open (IOException) or a
+    /// read-only one (UnauthorizedAccessException) is left behind with a log line, and never ends the run.</summary>
+    internal static void RemoveTemp(string tmp)
+    {
+        try { Directory.Delete(tmp, true); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            try { Directory.Delete(tmp, true); } catch (IOException e) { Log.Write($"could not remove {tmp}: {e.Message}"); }
+            Log.Write($"could not remove {tmp}: {e.GetType().Name}: {e.Message}");
         }
     }
 

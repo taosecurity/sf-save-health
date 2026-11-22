@@ -45,7 +45,7 @@ To type plain `sf-save-health` instead, add the folder to PATH for the current w
 sf-save-health --help
 ```
 
-Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report, for example `sf-save-health 0.7.1: Save3_....sfs`). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
+Expected: the usage text on stderr, starting `usage: sf-save-health check <save.sfs>`, and exit code 3 (the tool has no `--version`; the version is in the first line of every report, for example `sf-save-health 0.7.2: Save3_....sfs`). Exit code 3 is the expected result here, even though PowerShell and some agent tools show it as a failed command.
 
 To run the unit tests from a source clone (made-up files only, no game or saves needed): `dotnet test tests/SfSaveHealth.Tests -c Release` (expect all tests passed).
 
@@ -79,7 +79,7 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
 ## 6. Inputs and outputs
 
 - Input: one `.sfs` file for `check`; two `.sfs` files (`--before`, `--after`) or one sf-log-collector zip for `solo`.
-- `--data <folder>|auto`: the game's Data folder. With no `--data`, a bare `--data` or `--data auto`: the `STARFIELD_DATA` environment variable, then every Steam library, then `<drive>:\XboxGames\Starfield\Content\Data`. The first folder that holds `Starfield.esm` is used.
+- `--data <folder>|auto`: the game's Data folder. With no `--data`, or with `--data auto`: the `STARFIELD_DATA` environment variable, then every Steam library, then `<drive>:\XboxGames\Starfield\Content\Data`. The first folder that holds `Starfield.esm` is used.
 - `--plugins <file>` (check only): the game's `%LOCALAPPDATA%\Starfield\Plugins.txt` or a Vortex export of it. A modlist JSON is refused.
 - Output: the text report on stdout; with `--json`, one JSON object (`schema` `savehealth-report/1`, `version`, `save`, `data`, `verdict`, `exitCode`, `rules`). Errors and `--verbose` lines go to stderr.
 - Files written: `--log <file>` (appended to), and `solo`'s full report, `<name>.txt` in `--reports <folder>` (default `sf-save-health-reports` in the current folder; the folder, given or default, is created if needed). `solo` with a zip unpacks the two saves to a temporary folder and deletes it afterwards. Nothing else.
@@ -91,9 +91,9 @@ What to expect: each command exits 0, 1 or 2 when the check ran (section 7). Exi
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: usage error (including `--help`, an unknown command, an option given without its value, an option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, and solo's `--reports`, `--before`, `--after`; the rule covers all eight for every command) given more than once, or a `--limit` that isn't a number from 0 up or is larger than 2147483647), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a report that couldn't be written to the output (for example a full disk behind a redirect), a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. A switch (`--json`, `--redact`, `--verbose`) given twice is accepted. |
+| 3 | Couldn't check: usage error (including `--help` anywhere on the line, which shows the usage and runs nothing; an unknown command, such as `chek` alone, which prints `unknown command chek` and the usage; an option the command doesn't know, such as `--plugin` or `--JSON` (options are case-sensitive; the `fix:` line names a close option when there is one); an option of the other command, such as `--json` with `solo` or `--reports` with `check`; an option that takes a value given without one, such as `--data` at the end of the line or before another option (a bare `--data` no longer means auto: write `--data auto`); an option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, and solo's `--reports`, `--before`, `--after`; the rule covers all eight for every command) given more than once, or a `--limit` that isn't a number from 0 up or is larger than 2147483647), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a report that couldn't be written to the output (for example a full disk behind a redirect), a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. A switch (`--json`, `--redact`, `--verbose`) given twice is accepted. |
 
-If `solo` can't save its full report into `--reports`, it prints an `error:` line on stderr but still exits 0, 1 or 2, because the check ran and the report was printed on stdout.
+If `solo` can't save its full report into `--reports`, it prints an `error:` line on stderr but still exits 0, 1 or 2, because the check ran and the report was printed on stdout. `solo` saves that full report before it prints, so if the stdout write fails (exit 3), the saved copy in `--reports` is kept. A refused command line (any usage error) writes no log file.
 
 ## 8. Log
 

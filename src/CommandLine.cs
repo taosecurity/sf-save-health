@@ -1,15 +1,116 @@
 namespace SaveHealth;
 
+/// <summary>One command-line option: its name, the placeholder for its value (null for an on/off switch), and the
+/// commands that take it.</summary>
+internal sealed record OptionSpec(string Name, string? Value, bool Check, bool Solo, string Example = "<value>")
+{
+    public bool TakesValue => Value is not null;
+    public bool For(string command) => command == "check" ? Check : Solo;
+    /// <summary>The option as the usage text shows it, for example [--limit N].</summary>
+    public string Usage => Value is null ? $"[{Name}]" : $"[{Name} {Value}]";
+}
+
 /// <summary>The command line's options. Every argument that starts with -- is an option; the word after a valued
 /// option is its value (a value never starts with --).</summary>
 internal sealed class CommandLine(string[] args)
 {
     public string[] Args { get; } = args;
 
-    public bool Has(string name) => Array.IndexOf(Args, name) >= 0;
+    /// <summary>Every option, in the order the usage text lists them. The parser, the usage text and the tests all
+    /// read this one table, so an option can't be known to one and missing from another.</summary>
+    public static readonly OptionSpec[] Options =
+    [
+        new("--data", "<Starfield Data folder>", Check: true, Solo: true, Example: "auto"),
+        new("--plugins", "<plugins.txt>", Check: true, Solo: false, Example: "Plugins.txt"),
+        new("--reports", "<folder>", Check: false, Solo: true, Example: "reports"),
+        new("--json", null, Check: true, Solo: false),
+        new("--limit", "N", Check: true, Solo: true, Example: "50"),
+        new("--lang", "en", Check: true, Solo: true, Example: "en"),
+        new("--redact", null, Check: true, Solo: true),
+        new("--log", "<file>", Check: true, Solo: true, Example: "sf-save-health.log"),
+        new("--verbose", null, Check: true, Solo: true),
+        // solo's pair form: shown in its own usage line, not in solo's option list.
+        new("--before", "<a.sfs>", Check: false, Solo: true, Example: "a.sfs"),
+        new("--after", "<b.sfs>", Check: false, Solo: true, Example: "b.sfs"),
+    ];
 
     /// <summary>The options that take a value. Every other option is an on/off switch.</summary>
-    public static readonly string[] Valued = ["--log", "--limit", "--lang", "--plugins", "--reports", "--data", "--before", "--after"];
+    public static readonly string[] Valued = Options.Where(o => o.TakesValue).Select(o => o.Name).ToArray();
+
+    static OptionSpec? Find(string name) => Array.Find(Options, o => o.Name == name);
+
+    /// <summary>The usage text's option list for a command, built from the table.</summary>
+    public static string UsageOptions(string command) =>
+        string.Join(' ', Options.Where(o => o.For(command) && o.Name is not ("--before" or "--after")).Select(o => o.Usage));
+
+    public bool Has(string name)
+    {
+        Known(name, valued: false);
+        return Array.IndexOf(Args, name) >= 0;
+    }
+
+    /// <summary>The program may only ask about options in the table (and Option/Value only about valued ones), so a
+    /// new option can't be read without being in the table that the check, the usage text and the tests use.</summary>
+    static void Known(string name, bool valued)
+    {
+        var o = Find(name) ?? throw new InvalidOperationException($"{name} is not in CommandLine.Options");
+        if (valued && !o.TakesValue) throw new InvalidOperationException($"{name} is a switch, not an option with a value");
+    }
+
+    /// <summary>Refuses a command line the command can't use, before anything runs: an option the command doesn't
+    /// know (a mistyped one, or one that belongs to the other command) and a valued option with no value after it
+    /// (last, or followed by another --option). Options are case-sensitive. Words that don't start with -- (the save,
+    /// the zip, and the values) aren't checked here.</summary>
+    public void RefuseUnknown(string command)
+    {
+        for (int i = 1; i < Args.Length; i++)
+        {
+            string a = Args[i];
+            if (!a.StartsWith("--", StringComparison.Ordinal)) continue;
+            var o = Find(a);
+            if (o is null)
+                throw new UserError($"{command} doesn't know {a}", Closest(a, command) is { } near
+                    ? $"use {near} (options are case-sensitive; sf-save-health --help lists them)"
+                    : "check the spelling; sf-save-health --help lists the options");
+            if (!o.For(command))
+                throw new UserError($"{command} doesn't know {a}",
+                    $"{a} works only with {(command == "check" ? "solo" : "check")}; sf-save-health --help lists {command}'s options");
+            if (o.TakesValue)
+            {
+                if (i + 1 >= Args.Length || Args[i + 1].StartsWith("--", StringComparison.Ordinal))
+                    throw new UserError($"{a} needs a value", $"put the value right after {a}, for example {a} {o.Example}");
+                i++;   // the value
+            }
+        }
+    }
+
+    /// <summary>The command's option nearest to a mistyped one: the same name in other letter case, or one at most
+    /// two letters away. Null when nothing is that close.</summary>
+    internal static string? Closest(string given, string command)
+    {
+        var mine = Options.Where(o => o.For(command)).Select(o => o.Name).ToArray();
+        if (Array.Find(mine, n => n.Equals(given, StringComparison.OrdinalIgnoreCase)) is { } sameName) return sameName;
+        var best = mine.Select(n => (Name: n, Distance: Distance(given, n))).OrderBy(x => x.Distance).First();
+        return best.Distance <= 2 ? best.Name : null;
+    }
+
+    /// <summary>Levenshtein distance: the number of single-letter edits from a to b.</summary>
+    static int Distance(string a, string b)
+    {
+        var row = Enumerable.Range(0, b.Length + 1).ToArray();
+        for (int i = 1; i <= a.Length; i++)
+        {
+            int diag = row[0];
+            row[0] = i;
+            for (int j = 1; j <= b.Length; j++)
+            {
+                int up = row[j];
+                row[j] = Math.Min(Math.Min(row[j] + 1, row[j - 1] + 1), diag + (a[i - 1] == b[j - 1] ? 0 : 1));
+                diag = up;
+            }
+        }
+        return row[b.Length];
+    }
 
     /// <summary>An option that takes a value, given more than once, is a usage error, so a second value is never
     /// silently ignored (before 0.7.1 the first one was used). A switch given twice (--verbose --verbose) means the
@@ -26,26 +127,18 @@ internal sealed class CommandLine(string[] args)
     /// or followed by another --option) is a usage error.</summary>
     public string? Option(string name)
     {
+        Known(name, valued: true);
         if (!Has(name)) return null;
-        return Value(name) ?? throw new UserError($"{name} needs a value", $"put the value right after {name}, for example {name} {Example(name)}");
+        return Value(name) ?? throw new UserError($"{name} needs a value", $"put the value right after {name}, for example {name} {Find(name)!.Example}");
     }
 
     /// <summary>The value after an option, or null when the option is missing or has no value.</summary>
     public string? Value(string name)
     {
+        Known(name, valued: true);
         int i = Array.IndexOf(Args, name);
         return i >= 0 && i + 1 < Args.Length && !Args[i + 1].StartsWith("--", StringComparison.Ordinal) ? Args[i + 1] : null;
     }
-
-    static string Example(string name) => name switch
-    {
-        "--log" => "sf-save-health.log",
-        "--plugins" => "Plugins.txt",
-        "--reports" => "reports",
-        "--lang" => "en",
-        "--limit" => "50",
-        _ => "<value>",
-    };
 
     /// <summary>--limit N: how many examples each finding lists (default 10). Anything but a whole number from 0 up is
     /// a usage error (exit 3).</summary>

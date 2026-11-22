@@ -98,10 +98,68 @@ public class CommandLineTests : IDisposable
     }
 
     [Fact]
-    public void Every_valued_option_is_in_the_list()
+    public void The_valued_list_is_the_tables_valued_options()
     {
-        // Option() and Value() are only ever asked about these names; a new valued option must join the list.
-        Assert.Equal(["--log", "--limit", "--lang", "--plugins", "--reports", "--data", "--before", "--after"], CommandLine.Valued);
+        // Valued is built from the one option table, so it can't lack a valued option the table has.
+        Assert.Equal(["--data", "--plugins", "--reports", "--limit", "--lang", "--log", "--before", "--after"], CommandLine.Valued);
+        Assert.Equal(CommandLine.Options.Where(o => o.TakesValue).Select(o => o.Name), CommandLine.Valued);
+    }
+
+    [Fact]
+    public void Every_option_the_program_reads_is_in_the_table()
+    {
+        // A scan of the source: every Has/Option/Value call names an option in the table, and Option/Value only
+        // valued ones. A new option read anywhere without joining the table fails here (and at run time, below).
+        string src = Path.Combine(RepoRoot(), "src");
+        var calls = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .SelectMany(f => System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), "\\.(Has|Option|Value)\\(\"(--[a-z]+)\"\\)").Cast<System.Text.RegularExpressions.Match>())
+            .Select(m => (Kind: m.Groups[1].Value, Name: m.Groups[2].Value)).ToList();
+        Assert.True(calls.Count >= 10, $"only {calls.Count} option reads found; the scan's pattern no longer matches the code");
+        foreach (var (kind, name) in calls)
+        {
+            var spec = CommandLine.Options.SingleOrDefault(o => o.Name == name);
+            Assert.True(spec is not null, $"{name} is read in src but isn't in CommandLine.Options");
+            if (kind != "Has") Assert.True(spec!.TakesValue, $"{name} is read with {kind}() but the table has it as a switch");
+        }
+    }
+
+    [Fact]
+    public void Reading_an_option_that_is_not_in_the_table_throws()
+    {
+        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Has("--nosuch"));
+        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Value("--nosuch"));
+        Assert.Throws<InvalidOperationException>(() => Cl("check", "x.sfs").Option("--json"));   // a switch has no value
+    }
+
+    [Fact]
+    public void The_usage_lists_each_commands_options_as_0_7_1_did()
+    {
+        Assert.Equal("[--data <Starfield Data folder>] [--plugins <plugins.txt>] [--json] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]",
+            CommandLine.UsageOptions("check"));
+        Assert.Equal("[--data <Starfield Data folder>] [--reports <folder>] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]",
+            CommandLine.UsageOptions("solo"));
+    }
+
+    [Fact]
+    public void Every_option_in_the_usage_text_is_valued_or_a_switch_as_the_table_says()
+    {
+        var (_, err) = RunMain(["--help"]);
+        var shown = System.Text.RegularExpressions.Regex.Matches(err, "\\[(--[a-z]+)( [^\\]]+)?\\]").Cast<System.Text.RegularExpressions.Match>().ToList();
+        Assert.NotEmpty(shown);
+        foreach (var m in shown)
+        {
+            var spec = CommandLine.Options.Single(o => o.Name == m.Groups[1].Value);
+            Assert.Equal(spec.TakesValue, m.Groups[2].Success);
+        }
+        foreach (var o in CommandLine.Options) Assert.Contains(o.Name, err);
+    }
+
+    static string RepoRoot()
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null; d = d.Parent)
+            if (File.Exists(Path.Combine(d.FullName, "src", "Program.cs"))) return d.FullName;
+        throw new InvalidOperationException("couldn't find the repo's src folder above " + AppContext.BaseDirectory);
     }
 
     [Fact]
@@ -249,7 +307,7 @@ public class CommandLineTests : IDisposable
     }
 
     /// <summary>Runs the program's entry point with stderr sent to <paramref name="error"/> (or captured).</summary>
-    static (int Code, string Err) RunMain(string[] args, TextWriter? error = null)
+    internal static (int Code, string Err) RunMain(string[] args, TextWriter? error = null)
     {
         var captured = new StringWriter();
         var old = Console.Error;

@@ -2,6 +2,36 @@
 
 ## 0.7.2 (unreleased)
 
+### What's new
+
+This release stops quietly ignoring mistakes on the command line. A mistyped option, an option of the other command or an option with its value missing is now refused with a clear error, instead of the run going on without it. `solo` also keeps its saved report when printing fails.
+
+### Example
+
+    > sf-save-health check "Save3_....sfs" --plugin Plugins.txt
+    error: check doesn't know --plugin
+      fix: use --plugins (options are case-sensitive; sf-save-health --help lists them)
+
+The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7.2 build.
+
+### Behavior change
+
+- A bare `--data` (at the end of the line, or followed by another option) no longer means the automatic search. It is now a usage error (exit code 3). Write `--data auto` instead.
+
+### Fixes
+
+- Every option that takes a value (`--data`, `--plugins`, `--limit`, `--lang`, `--log`, `--reports`, `--before`, `--after`), given without one, is a usage error (exit code 3) that names the option.
+- An option the command doesn't know, such as `--plugin` or `--JSON`, is a usage error (exit code 3). Options stay case-sensitive. When the name is close to a real option, the fix line names it.
+- An option of the other command, such as `--json` with `solo` or `--reports` with `check`, is a usage error that says which command the option works with.
+- An unknown command given alone, such as `sf-save-health chek`, now says `unknown command chek` before the usage text.
+- `--help` anywhere on the line shows the usage and runs nothing. Before, it was ignored when it wasn't first.
+- `solo` saves its full report in `--reports` before it prints the short one, so a failed write to the output (exit code 3) no longer loses the saved copy.
+- The fix line for a report that can't be written now also names room on the drive and access rights.
+- `solo`'s cleanup of its temporary folder no longer stops on an access-denied error. It stays best-effort and writes a log line.
+- A refused command line still writes no log file.
+- The parser, the usage text and the tests now read one table of options, so a new option can't be left out of the checks.
+- New tests cover each of these cases.
+
 ## 0.7.1 (2026-11-20)
 
 ### What's new

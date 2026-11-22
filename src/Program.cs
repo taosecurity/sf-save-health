@@ -8,13 +8,17 @@ using SaveHealth.Rules;
 // Exit codes: 0 healthy, 1 warnings or notes only, 2 problems, 3 couldn't check (bad arguments, unreadable save,
 // unsupported save version).
 
-if (args.Length < 2 || args[0] is "-h" or "--help" or "help")
+// --help anywhere (sf-save-health check x.sfs --help) shows the usage instead of running.
+if (args.Length < 2 || args[0] is "-h" or "--help" or "help" || Array.IndexOf(args, "--help") >= 0)
 {
+    // A lone unknown word (sf-save-health chek) says so before the usage, as an unknown command with more after it does.
+    if (args.Length == 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help"))
+        BestEffort(() => Console.Error.WriteLine($"unknown command {args[0]}"));
     BestEffort(() =>
     {
-        Console.Error.WriteLine("usage: sf-save-health check <save.sfs> [--data <Starfield Data folder>] [--plugins <plugins.txt>] [--json] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]");
+        Console.Error.WriteLine($"usage: sf-save-health check <save.sfs> {CommandLine.UsageOptions("check")}");
         Console.Error.WriteLine("         (--plugins: also check the save against a load order, the game's Plugins.txt or a Vortex export of it)");
-        Console.Error.WriteLine("       sf-save-health solo <StarfieldLogs-*.zip> [--data <Starfield Data folder>] [--reports <folder>] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]");
+        Console.Error.WriteLine($"       sf-save-health solo <StarfieldLogs-*.zip> {CommandLine.UsageOptions("solo")}");
         Console.Error.WriteLine("       sf-save-health solo --before <a.sfs> --after <b.sfs> [the same options]");
         Console.Error.WriteLine("         (a before/after pair, from sf-log-collector's zip or two saves: prints only what is new in the after save)");
         Console.Error.WriteLine("       --data defaults to auto: the STARFIELD_DATA environment variable, then every Steam library, then Game Pass");
@@ -28,14 +32,16 @@ var cl = new CommandLine(args);
 if (cl.Has("--redact")) Redact.Enable();
 try
 {
-    // The command name first (an unknown command is the error to report), then repeated options; both before --log
-    // is opened, so a refused run writes no log and a second --log can't be silently ignored.
+    // The command name first (an unknown command is the error to report), then options the command doesn't know or
+    // that lack their value, then repeated options; all before --log is opened, so a refused run writes no log and a
+    // second --log can't be silently ignored.
     string command = args[0].ToLowerInvariant();
     if (command is not ("check" or "solo"))
     {
         BestEffort(() => Console.Error.WriteLine(Redact.Apply($"unknown command {args[0]} (try: sf-save-health check <save.sfs>, or sf-save-health solo <StarfieldLogs-*.zip>)")));
         return 3;
     }
+    cl.RefuseUnknown(command);
     cl.RefuseRepeats();
     Log.Open(cl.Option("--log"), cl.Has("--verbose"));
     switch (command)
@@ -65,35 +71,8 @@ try
             Redact.ExpectPlayers(2);
             var o = pair ? Solo.RunPair(before!, after!, DataFolder(), cl.Option("--lang") ?? "en", limit)
                          : Solo.Run(args[1], DataFolder(), cl.Option("--lang") ?? "en", limit);
-            Output.WriteReport(Redact.Apply(o.Text));
             string name = pair ? Path.GetFileNameWithoutExtension(after!) + "-solo" : Path.GetFileNameWithoutExtension(args[1]);
-            string report = Path.Combine(dir, Redact.FileName(name) + ".txt");
-            // The check ran and its report is printed above, so a failed saved copy is reported on stderr
-            // but doesn't hide the verdict: the exit code stays 0, 1 or 2.
-            // Only the save itself is guarded here, so a later failure (stdout or the log) isn't reported as a failed save.
-            string? saveError = null;
-            try
-            {
-                Directory.CreateDirectory(dir);
-                File.WriteAllText(report, Redact.Apply(o.FullText));
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-            {
-                saveError = e.Message;
-            }
-            // The check has finished, so nothing from here on may change the verdict's exit code: Log.Write never
-            // throws (a failing log stops with a note), and the two console lines are best effort.
-            if (saveError is null)
-            {
-                BestEffort(() => Console.WriteLine(Redact.Apply($"Report saved to {report}")));
-                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
-            }
-            else
-            {
-                BestEffort(() => Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: pass --reports with a folder you can write to (the report above is complete; only the saved copy is missing)")));
-                Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
-            }
-            return o.ExitCode;
+            return Output.FinishSolo(o, dir, Path.Combine(dir, Redact.FileName(name) + ".txt"));
         }
         default:
             return 3;   // not reached: an unknown command is refused above
@@ -129,8 +108,9 @@ static void BestEffort(Action write)
     catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }
 }
 
-// --data <folder> uses that folder; no --data, a bare --data (last, or followed by another option) or --data auto
-// searches the usual places with SfsReader.DataFolder.Find.
+// --data <folder> uses that folder; no --data or --data auto searches the usual places with SfsReader.DataFolder.Find.
+// A bare --data (last, or followed by another option) is refused by RefuseUnknown before this runs (since 0.7.2;
+// before, it meant auto).
 string DataFolder()
 {
     string? given = cl.Value("--data");
@@ -151,7 +131,53 @@ internal static class Output
         catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException)
         {
             throw new UserError($"couldn't write the report to the output: {e.Message}",
-                "if you piped or redirected the output, make sure the program or file on the other end is still open and has room, then run again");
+                "if you piped or redirected the output, make sure the program or file on the other end is still open, " +
+                "that its drive has room and that you may write to it, then run again");
         }
+    }
+
+    /// <summary>The fix line for a solo report that couldn't be saved (a missing or read-only folder, no access
+    /// rights, a full disk).</summary>
+    internal const string SaveFix = "check that the folder's drive has room and that you may write there, or pass --reports with a folder you can write to " +
+                                    "(the report above is complete; only the saved copy is missing)";
+
+    /// <summary>solo's end: saves the full report to <paramref name="report"/> (in <paramref name="dir"/>) first, then prints the short one, so a
+    /// failed stdout write (exit 3, from WriteReport) can't lose the saved copy. A failed save is reported on stderr
+    /// but doesn't hide the verdict: the exit code stays 0, 1 or 2.</summary>
+    internal static int FinishSolo(Solo.Outcome o, string dir, string report)
+    {
+        // Only the save itself is guarded here, so a later failure (stdout or the log) isn't reported as a failed save.
+        string? saveError = null;
+        try
+        {
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(report, Redact.Apply(o.FullText));
+            Log.Write($"solo: report saved to {report}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            saveError = e.Message;
+            Log.Write($"solo: report not saved to {report}: {e.GetType().Name}: {e.Message}");
+        }
+        WriteReport(Redact.Apply(o.Text));
+        // The check has finished and its report is printed, so nothing from here on may change the verdict's exit
+        // code: Log.Write never throws (a failing log stops with a note), and the two console lines are best effort.
+        if (saveError is null)
+        {
+            BestEffort(() => Console.WriteLine(Redact.Apply($"Report saved to {report}")));
+            Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report {report}");
+        }
+        else
+        {
+            BestEffort(() => Console.Error.WriteLine(Redact.Apply($"error: couldn't save the report to {report}: {saveError}\n  fix: {SaveFix}")));
+            Log.Write($"done: {o.Verdict} exit {o.ExitCode}; report not saved: {saveError}");
+        }
+        return o.ExitCode;
+    }
+
+    static void BestEffort(Action write)
+    {
+        try { write(); }
+        catch (Exception e) when (e is IOException or ObjectDisposedException or UnauthorizedAccessException) { }
     }
 }
