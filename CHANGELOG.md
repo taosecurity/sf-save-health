@@ -26,6 +26,9 @@ The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7
 - The README's sample outputs now show the 0.7.3 banner, and the release build refuses a README or AGENTS.md whose banner shows another version.
 - The usage text now mentions `-h` and `help`.
 - Two complete paths, such as two `.sfs` files or two zips, are no longer called one path split in two.
+- A mistyped option with one dash, such as `-json`, is now reported as an option that needs two dashes (and names the close option), not as an extra word.
+- A complete option value followed by a stray word, such as `--plugins C:\p\Plugins.txt oops`, is no longer called one path split in two.
+- The README notes that a save or zip named `help` needs a path such as `.\help`, because the word `help` alone shows the usage.
 - New tests cover each of these cases.
 
 ## 0.7.2 (2026-11-22)

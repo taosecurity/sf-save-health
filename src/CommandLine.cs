@@ -78,6 +78,14 @@ internal sealed class CommandLine(string[] args)
         for (int i = 1; i < Args.Length; i++)
         {
             string a = Args[i];
+            if (a.Length > 1 && a[0] == '-' && a[1] != '-')
+            {
+                // A single dash (-json, -v): an option with a dash missing, not a path or an extra word.
+                string dashed = "--" + a[1..];
+                throw new UserError($"{command} doesn't know {a}", Closest(dashed, command) is { } fix
+                    ? $"options start with two dashes: use {fix} (sf-save-health --help lists them)"
+                    : "options start with two dashes; sf-save-health --help lists them");
+            }
             if (!a.StartsWith("--", StringComparison.Ordinal))
             {
                 if (!(i == 1 && firstWord))
@@ -129,7 +137,10 @@ internal sealed class CommandLine(string[] args)
         // A first word that already ends in .sfs (check) or .zip (solo) is a complete save or zip, not half of a path:
         // the second word is then a second save or zip, and "one path split in two" would mislead.
         bool completeFile = x.Before is not null
-            && (x.Before.EndsWith(".sfs", StringComparison.OrdinalIgnoreCase) || x.Before.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            && (x.Before.EndsWith(".sfs", StringComparison.OrdinalIgnoreCase) || x.Before.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                // Any other complete file name (--plugins C:\p\Plugins.txt oops) is complete too, unless the next word
+                // holds a path separator (C:\My Mods.v2\x).
+                || (Path.GetExtension(x.Before).Length > 1 && x.Word.IndexOfAny(['\\', '/']) < 0));
         if (x.Before is not null && !completeFile && LooksLikePath(x.Before, x.Word))
         {
             string joined = x.Before + " " + x.Word;

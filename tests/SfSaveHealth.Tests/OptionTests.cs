@@ -374,6 +374,34 @@ public class OptionTests : IDisposable
         Assert.True(CommandLine.WantsHelp(["check", "x.sfs", "--reports", "x", "-h"]));
     }
 
+    [Theory]
+    [InlineData("-json", "use --json")]
+    [InlineData("-limit", "use --limit")]
+    [InlineData("-v", "options start with two dashes; sf-save-health --help lists them")]
+    public void A_single_dash_option_is_named_as_an_option_with_a_dash_missing(string word, string fix)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain(["check", "a.sfs", word, "--log", log]);
+        Assert.Equal(3, code);
+        Assert.Contains($"check doesn't know {word}", err);
+        Assert.Contains(fix, err);
+        Assert.DoesNotContain("extra word", err);
+        Assert.False(File.Exists(log));
+    }
+
+    [Fact]
+    public void A_complete_option_value_followed_by_a_stray_word_is_not_called_a_split_path()
+    {
+        var (code, err) = RunMain(["check", "a.sfs", "--plugins", "C:\\p\\Plugins.txt", "oops"]);
+        Assert.Equal(3, code);
+        Assert.Contains("got an extra word \"oops\"", err);
+        Assert.DoesNotContain("split in two", err);
+        // A real split path with a dot in its folder name is still recognized.
+        var (_, err2) = RunMain(["check", "a.sfs", "--plugins", "C:\\My", "Mods.v2\\Plugins.txt"]);
+        Assert.Contains("split in two", err2);
+    }
+
     [Fact]
     public void The_usage_text_says_that_dash_h_and_help_show_it()
     {
