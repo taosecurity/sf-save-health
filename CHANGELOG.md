@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.3 (unreleased)
+## 0.7.3 (2026-11-22)
 
 ### What's new
 
