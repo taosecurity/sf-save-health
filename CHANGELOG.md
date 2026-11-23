@@ -29,6 +29,7 @@ The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7
 - A mistyped option with one dash, such as `-json`, is now reported as an option that needs two dashes (and names the close option), not as an extra word.
 - A complete option value followed by a stray word, such as `--plugins C:\p\Plugins.txt oops`, is no longer called one path split in two.
 - The README notes that a save or zip named `help` needs a path such as `.\help`, because the word `help` alone shows the usage.
+- When the first word after the command starts with one dash and isn't a `.sfs` or `.zip` name, the error now says to write it as `.\-name` if it is a file.
 - New tests cover each of these cases.
 
 ## 0.7.2 (2026-11-22)
