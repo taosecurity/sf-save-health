@@ -213,6 +213,27 @@ public class OptionTests : IDisposable
         Assert.StartsWith("unknown command chek", err);
     }
 
+    [Theory]
+    [InlineData("--VERSION")]
+    [InlineData("--Help")]
+    [InlineData("HELP")]
+    [InlineData("-H")]
+    public void A_lone_mixed_case_help_or_version_word_is_named_as_unknown(string word)
+    {
+        var (code, err) = RunMain([word]);
+        Assert.Equal(3, code);
+        Assert.StartsWith($"unknown command {word}", err);
+        Assert.Contains("usage: sf-save-health check <save.sfs>", err);
+    }
+
+    [Fact]
+    public void A_lone_mixed_case_command_still_shows_only_the_usage()
+    {
+        var (code, err) = RunMain(["CHECK"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
+    }
+
     [Fact]
     public void Help_wins_over_version()
     {

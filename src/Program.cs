@@ -19,10 +19,20 @@ if (args.Length < 2 || wantsHelp || wantsVersion)
     // command with more after it does. The first word is the user's own text (it can be a save path), so --redact
     // on the line hides it here too.
     if (Array.IndexOf(args, "--redact") >= 0) Redact.Enable();
-    bool unknownCommand = args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help" or "--version");
+    // Commands are case-insensitive, the help and version words are not (as options), so a lone --VERSION or HELP
+    // is named as unknown before the usage instead of failing with the usage alone.
+    bool unknownCommand = args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo")
+                          && args[0] is not ("-h" or "--help" or "help" or "--version");
     if (wantsVersion && !unknownCommand)
     {
-        Console.Out.WriteLine($"sf-save-health {typeof(CommandLine).Assembly.GetName().Version?.ToString(3)}");
+        // The version is the only output, so a stdout that can't be written (a full disk behind a redirect) is
+        // exit 3 with an error line, as for a report.
+        try { Output.WriteReport($"sf-save-health {typeof(CommandLine).Assembly.GetName().Version?.ToString(3)}{Environment.NewLine}"); }
+        catch (UserError e)
+        {
+            BestEffort(() => Console.Error.WriteLine($"error: {e.Message}\n  fix: {e.Fix}"));
+            return 3;
+        }
         return 0;
     }
     if (unknownCommand)

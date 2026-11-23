@@ -256,6 +256,21 @@ public class CommandLineTests : IDisposable
     }
 
     [Fact]
+    public void A_version_that_cannot_be_written_exits_3_with_an_error_line()
+    {
+        var old = Console.Out;
+        Console.SetOut(new ClosedWriter());
+        try
+        {
+            var (code, err) = RunMain(["--version"]);
+            Assert.Equal(3, code);
+            Assert.StartsWith("error: couldn't write the report to the output: The pipe has been ended.", err);
+            Assert.Contains("fix:", err);
+        }
+        finally { Console.SetOut(old); }
+    }
+
+    [Fact]
     public void A_bad_limit_exits_3_with_its_message()
     {
         var (code, err) = RunMain(["check", "x.sfs", "--limit", "-1"]);

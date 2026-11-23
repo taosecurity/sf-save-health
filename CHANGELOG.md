@@ -18,6 +18,8 @@ The run ends with exit code 0. The output was checked on 2026-11-23 with the 0.7
 - `--help`, `-h` and `help` anywhere on the line exit 0 (0.7.3 and older: 3). The usage text is still printed on stderr, and nothing else runs.
 - `--version` anywhere on the line prints `sf-save-health 0.7.4` on stdout, exits 0 and runs nothing. If `--help` is there too, the usage text is shown.
 - These still exit 3: an unknown command (`chek --help`, `chek --version`), a command with nothing after it (`check` alone), and every other usage error.
+- The help and version words are case-sensitive, like the options: a lone `--VERSION` or `HELP` now says `unknown command --VERSION` (or `HELP`) before the usage text, and exits 3.
+- If the version can't be written to the output (for example a full disk behind a redirect), `--version` prints an `error:` line and a `fix:` line and exits 3.
 
 ## 0.7.3 (2026-11-22)
 
