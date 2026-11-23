@@ -184,14 +184,19 @@ internal sealed class CommandLine(string[] args)
         before.IndexOfAny(['\\', '/', ':']) >= 0 || word.IndexOfAny(['\\', '/']) >= 0;
 
     /// <summary>True when -h, --help or help is on the line as a word of its own: anywhere, so "check x.sfs -h" shows
-    /// the usage instead of running (since 0.7.3). The word right after a valued option is that option's value
+    /// the usage instead of running (since 0.7.3; exit 0 since 0.7.4). The word right after a valued option is that option's value
     /// (--reports help names a folder called help), and the command word counts.</summary>
-    public static bool WantsHelp(string[] args)
+    public static bool WantsHelp(string[] args) => HasWord(args, "--help", "-h", "help");
+
+    /// <summary>True when --version is on the line as a word of its own (since 0.7.4), found the same way as help.</summary>
+    public static bool WantsVersion(string[] args) => HasWord(args, "--version");
+
+    static bool HasWord(string[] args, params string[] words)
     {
         for (int i = 0; i < args.Length; i++)
         {
             string a = args[i];
-            if (a is "--help" or "-h" or "help") return true;
+            if (Array.IndexOf(words, a) >= 0) return true;
             if (i > 0 && Array.IndexOf(Valued, a) >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) i++;
         }
         return false;

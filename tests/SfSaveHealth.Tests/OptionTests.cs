@@ -163,17 +163,76 @@ public class OptionTests : IDisposable
     }
 
     [Theory]
-    [InlineData("check")]
-    [InlineData("solo")]
-    [InlineData("--help")]
-    [InlineData("help")]
-    [InlineData("-h")]
-    public void A_lone_known_word_shows_only_the_usage(string word)
+    [InlineData("check", 3)]    // a command with nothing after it is a usage error
+    [InlineData("solo", 3)]
+    [InlineData("--help", 0)]   // since 0.7.4 a help request exits 0
+    [InlineData("help", 0)]
+    [InlineData("-h", 0)]
+    public void A_lone_known_word_shows_only_the_usage(string word, int expected)
     {
         var (code, err) = RunMain([word]);
-        Assert.Equal(3, code);
+        Assert.Equal(expected, code);
         Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
         Assert.DoesNotContain("unknown command", err);
+    }
+
+    [Fact]
+    public void No_arguments_at_all_is_a_usage_error()
+    {
+        var (code, err) = RunMain([]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
+    }
+
+    [Theory]
+    [InlineData("--version")]
+    [InlineData("check|--version")]
+    [InlineData("check|x.sfs|--json|--version")]
+    [InlineData("solo|x.zip|--version")]
+    public void Version_prints_the_version_and_exits_0_and_runs_nothing(string line)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var oldOut = Console.Out;
+        var output = new StringWriter();
+        Console.SetOut(output);
+        (int Code, string Err) r;
+        try { r = RunMain([.. line.Split('|'), "--log", log]); }
+        finally { Console.SetOut(oldOut); }
+        Assert.Equal(0, r.Code);
+        Assert.Matches("^sf-save-health [0-9]+\\.[0-9]+\\.[0-9]+\\r?\\n$", output.ToString());
+        Assert.Equal("", r.Err);
+        Assert.False(File.Exists(log));
+    }
+
+    [Fact]
+    public void Version_after_an_unknown_command_is_still_a_usage_error()
+    {
+        var (code, err) = RunMain(["chek", "x.sfs", "--version"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command chek", err);
+    }
+
+    [Fact]
+    public void Help_wins_over_version()
+    {
+        var (code, err) = RunMain(["--version", "--help"]);
+        Assert.Equal(0, code);
+        Assert.StartsWith("usage:", err);
+    }
+
+    [Theory]
+    [InlineData("frob|x.sfs")]                              // an unknown command
+    [InlineData("check|x.sfs|--limit")]                     // a valued option with no value
+    [InlineData("check|x.sfs|--limit|ten")]                 // a bad option value
+    [InlineData("check|x.sfs|--bogus")]                     // an unknown option
+    [InlineData("check|a.sfs|b.sfs")]                       // an extra word
+    [InlineData("solo|x.zip|--json")]                       // an option of the other command
+    public void Real_usage_errors_still_exit_3(string line)
+    {
+        var (code, err) = RunMain(line.Split('|'));
+        Assert.Equal(3, code);
+        Assert.DoesNotContain("usage: sf-save-health check <save.sfs>", err);
     }
 
     [Fact]
@@ -356,7 +415,7 @@ public class OptionTests : IDisposable
         using var d = new TempDir();
         string log = Path.Combine(d.Path, "x.log");
         var (code, err) = RunMain([.. line.Split('|'), "--log", log]);
-        Assert.Equal(3, code);
+        Assert.Equal(0, code);
         Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
         Assert.False(File.Exists(log));
     }
@@ -440,7 +499,7 @@ public class OptionTests : IDisposable
     public void The_usage_text_says_that_dash_h_and_help_show_it()
     {
         var (_, err) = RunMain(["--help"]);
-        Assert.Contains("-h or help anywhere on the line shows this text", err);
+        Assert.Contains("-h or help anywhere on the line shows this text and exits 0; --version prints the version", err);
     }
 
     [Fact]
@@ -457,7 +516,7 @@ public class OptionTests : IDisposable
         using var d = new TempDir();
         string log = Path.Combine(d.Path, "x.log");
         var (code, err) = RunMain(["check", "x.sfs", "--log", log, "--help"]);
-        Assert.Equal(3, code);
+        Assert.Equal(0, code);
         Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
         Assert.False(File.Exists(log));
     }

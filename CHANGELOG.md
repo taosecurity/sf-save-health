@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.4 (unreleased)
+
+### What's new
+
+`--help`, `-h` and `help` now show the usage text and exit 0, wherever they are on the command line. A new `--version` prints the version and exits 0, so a setup check can ask for the version without reading the help screen. A real usage error still exits 3.
+
+### Example
+
+    > sf-save-health --version
+    sf-save-health 0.7.4
+
+The run ends with exit code 0. The output was checked on 2026-11-23 with the 0.7.4 build.
+
+### Behavior change
+
+- `--help`, `-h` and `help` anywhere on the line exit 0 (0.7.3 and older: 3). The usage text is still printed on stderr, and nothing else runs.
+- `--version` anywhere on the line prints `sf-save-health 0.7.4` on stdout, exits 0 and runs nothing. If `--help` is there too, the usage text is shown.
+- These still exit 3: an unknown command (`chek --help`, `chek --version`), a command with nothing after it (`check` alone), and every other usage error.
+
 ## 0.7.3 (2026-11-22)
 
 ### What's new

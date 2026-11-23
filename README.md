@@ -28,7 +28,7 @@ This is a real save, checked with `--redact` so the character name is hidden. It
 
 ```
 > sf-save-health check "Save3_....sfs" --redact
-sf-save-health 0.7.3: Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs
+sf-save-health 0.7.4: Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs
   <player>, level 8, Frontier, playtime 0 days 0 hours 38 minutes, saved 2026-11-11 00:06 UTC
   13 plugins in the save; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
 
@@ -136,11 +136,11 @@ The command line is checked before anything runs, and these are usage errors (ex
 - An option that takes a value given without one, such as `--data` at the end of the line or followed by another option. Write `--data auto` for the automatic search.
 - An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it (and says that options are case-sensitive when only the letter case differs).
 - An option of the other command, such as `--json` with `solo` or `--reports` with `check`. A mistyped one, such as `--JSON` with `solo`, is named as the other command's option too.
-- An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text.
+- An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text and still exits 3.
 - An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
 - `solo` with both a zip and `--before`/`--after`: give one or the other.
 - An extra word that is not an option, not an option's value and not the save (or the zip for `solo`), such as a second save. A path with a space in it that isn't in quotes splits into two words and is refused too: write `check "C:\My Saves\x.sfs"`.
-- `--help`, `-h` or `help` anywhere on the line, which shows the usage text and runs nothing. A word right after an option that takes a value is that value, so `--reports help` names a folder called `help`. A save or zip that is itself named `help` needs a path such as `.\help`.
+Help is not a usage error. `--help`, `-h` or `help` anywhere on the line shows the usage text, runs nothing and exits 0. `--version` anywhere on the line prints `sf-save-health 0.7.4` and exits 0, and also runs nothing. A word right after an option that takes a value is that value, so `--reports help` names a folder called `help`. A save or zip that is itself named `help` needs a path such as `.\help`. Only an unknown command with help (`chek --help`) and a command with nothing after it (`check` alone) still show the usage and exit 3.
 
 For example:
 
@@ -167,7 +167,7 @@ Here is a real `solo` run on a log-collector zip from a new character's test, wi
 
 ```
 > sf-save-health solo "StarfieldLogs-20261110-190752-....zip" --redact
-sf-save-health 0.7.3 solo: StarfieldLogs-20261110-190752-....zip
+sf-save-health 0.7.4 solo: StarfieldLogs-20261110-190752-....zip
   before: before-Save2_143C1F9EM<name>_000030_20261110235820_3_0_4.sfs  level 3, Jemison - The Lodge, playtime 0 days 0 hours 30 minutes, saved 2026-11-10 23:58 UTC
   after:  after-Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs  level 8, Frontier, playtime 0 days 0 hours 38 minutes, saved 2026-11-11 00:06 UTC
   <player>; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
@@ -227,10 +227,10 @@ For Q2 and Q3 the tool reads every version of each quest (the original and every
 
 | Code | Meaning |
 |---|---|
-| 0 | Healthy: no findings. |
+| 0 | Healthy: no findings. Also `--help`, `-h`, `help` and `--version`, which only print text. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: a usage error (an unknown command, an option the command doesn't know, an option given without its value or given twice, an extra word such as a second save or an unquoted path with a space, or `--help`, `-h` or `help`; see Commands), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: a usage error (an unknown command, an option the command doesn't know, an option given without its value or given twice, an extra word such as a second save or an unquoted path with a space; see Commands), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
 If `solo` can't save its full report into the `--reports` folder, it prints an `error:` line but still exits 0, 1 or 2, because the check ran and the report was printed. The fix line asks you to check that the folder's drive has room and that you may write there, or to pass `--reports` with another folder.
 

@@ -5,17 +5,27 @@ using SaveHealth.Rules;
 //   check <save.sfs> [--data <Data folder>|auto] [--plugins <plugins.txt>] [--json] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]
 //   solo <StarfieldLogs-*.zip> | solo --before <a.sfs> --after <b.sfs>
 //        [--data <Data folder>|auto] [--reports <folder>] [--limit N] [--lang en] [--redact] [--log <file>] [--verbose]
-// Exit codes: 0 healthy, 1 warnings or notes only, 2 problems, 3 couldn't check (bad arguments, unreadable save,
-// unsupported save version).
+// Exit codes: 0 healthy (also --help and --version), 1 warnings or notes only, 2 problems, 3 couldn't check (bad
+// arguments, unreadable save, unsupported save version).
 
-// --help, -h or help anywhere (sf-save-health check x.sfs -h) shows the usage instead of running.
-if (args.Length < 2 || CommandLine.WantsHelp(args))
+// --help, -h or help anywhere (sf-save-health check x.sfs -h) shows the usage instead of running and exits 0 (since
+// 0.7.4; 3 before). --version anywhere prints the version and exits 0. A line with no help word that is too short
+// (a lone check or solo) or whose first word isn't a command (chek x.sfs --help) is still a usage error, exit 3.
+bool wantsHelp = CommandLine.WantsHelp(args);
+bool wantsVersion = !wantsHelp && CommandLine.WantsVersion(args);
+if (args.Length < 2 || wantsHelp || wantsVersion)
 {
     // An unknown first word (sf-save-health chek, or chek x.sfs --help) says so before the usage, as an unknown
     // command with more after it does. The first word is the user's own text (it can be a save path), so --redact
     // on the line hides it here too.
     if (Array.IndexOf(args, "--redact") >= 0) Redact.Enable();
-    if (args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help"))
+    bool unknownCommand = args.Length >= 1 && args[0].ToLowerInvariant() is not ("check" or "solo" or "-h" or "--help" or "help" or "--version");
+    if (wantsVersion && !unknownCommand)
+    {
+        Console.Out.WriteLine($"sf-save-health {typeof(CommandLine).Assembly.GetName().Version?.ToString(3)}");
+        return 0;
+    }
+    if (unknownCommand)
         BestEffort(() => Console.Error.WriteLine(Redact.Apply($"unknown command {args[0]}")));
     BestEffort(() =>
     {
@@ -27,9 +37,9 @@ if (args.Length < 2 || CommandLine.WantsHelp(args))
         Console.Error.WriteLine("       --data defaults to auto: the STARFIELD_DATA environment variable, then every Steam library, then Game Pass");
         Console.Error.WriteLine("         (<drive>:\\XboxGames\\Starfield\\Content\\Data); the first folder that holds Starfield.esm is used");
         Console.Error.WriteLine("       --reports defaults to .\\sf-save-health-reports; --redact hides the character, user and computer names and the profile folder");
-        Console.Error.WriteLine("       (-h or help anywhere on the line shows this text)");
+        Console.Error.WriteLine("       (-h or help anywhere on the line shows this text and exits 0; --version prints the version)");
     });
-    return 3;
+    return wantsHelp && !unknownCommand ? 0 : 3;
 }
 
 var cl = new CommandLine(args);

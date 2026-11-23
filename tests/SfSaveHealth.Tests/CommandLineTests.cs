@@ -300,7 +300,7 @@ public class CommandLineTests : IDisposable
     // The error handlers' console writes are best effort: a closed stderr can't turn exit 3 into a crash.
 
     [Theory]
-    [InlineData("--help", "x")]                         // the usage text
+    [InlineData("chek", "--help")]                      // the usage text after an unknown command
     [InlineData("frob", "x.sfs")]                       // an unknown command
     [InlineData("check", "x.sfs", "--limit", "ten")]    // a UserError
     [InlineData("check", "x.sfs", "--log", "a", "--log", "b")]  // a repeated option
@@ -308,6 +308,13 @@ public class CommandLineTests : IDisposable
     {
         var (code, _) = RunMain(args, new ClosedWriter());
         Assert.Equal(3, code);
+    }
+
+    [Fact]
+    public void A_closed_error_stream_keeps_exit_0_for_help()
+    {
+        var (code, _) = RunMain(["--help"], new ClosedWriter());
+        Assert.Equal(0, code);
     }
 
     [Fact]
