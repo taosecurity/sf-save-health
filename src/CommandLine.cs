@@ -11,7 +11,9 @@ internal sealed record OptionSpec(string Name, string? Value, bool Check, bool S
 }
 
 /// <summary>The command line's options. Every argument that starts with -- is an option; the word after a valued
-/// option is its value (a value never starts with --).</summary>
+/// option is its value (a value never starts with --). A word with a single dash (-json) is a mistyped option unless
+/// it is the save or zip right after the command and ends in .sfs or .zip. A word that is neither an option, a value
+/// nor the command's save or zip is refused as an extra word (since 0.7.3).</summary>
 internal sealed class CommandLine(string[] args)
 {
     public string[] Args { get; } = args;
@@ -65,9 +67,10 @@ internal sealed class CommandLine(string[] args)
     /// <summary>Refuses a command line the command can't use, before anything runs: an option the command doesn't
     /// know (a mistyped one, or one that belongs to the other command) and a valued option with no value after it
     /// (last, or followed by another --option). Options are case-sensitive. Then the save or zip's place: check and
-    /// solo need it right after the command, and solo takes either a zip or --before/--after, not both. A word that is neither an
-    /// option, a value nor the save or zip is an extra word (since 0.7.3) and is refused too. Other words
-    /// that don't start with -- (the values) aren't options.</summary>
+    /// solo need it right after the command, and solo takes either a zip or --before/--after, not both. A word with a
+    /// single dash (-json) is refused as an option missing a dash, unless it is the save or zip itself (first word,
+    /// .sfs or .zip). A word that is neither an option, a value nor the save or zip is an extra word (since 0.7.3)
+    /// and is refused too. The words after a valued option are its values, not options.</summary>
     public void RefuseUnknown(string command)
     {
         string other = command == "check" ? "solo" : "check";
@@ -79,7 +82,8 @@ internal sealed class CommandLine(string[] args)
         {
             string a = Args[i];
             // The save or zip right after the command may start with a dash (-old.sfs): it is a file, not an option.
-            bool dashFile = i == 1 && firstWord && (HasFileExtension(a, SaveOrZip) || File.Exists(a) || Directory.Exists(a));
+            // Decided by position and extension only (never by what is on disk), so a command line means the same in every folder.
+            bool dashFile = i == 1 && firstWord && HasFileExtension(a, SaveOrZip);
             if (a.Length > 1 && a[0] == '-' && a[1] != '-' && !dashFile)
             {
                 // A single dash (-json, -v): an option with a dash missing, not a path or an extra word.
@@ -125,14 +129,18 @@ internal sealed class CommandLine(string[] args)
             if (!pair && !first)
                 throw new UserError("solo needs the zip right after the command", "put the zip first, for example sf-save-health solo StarfieldLogs-1.zip, or pass --before <a.sfs> --after <b.sfs>");
         }
-        if (extras.Count > 0) throw ExtraWord(command, extras[0], firstWord);
+        if (extras.Count > 0) throw ExtraWord(command, extras, firstWord);
     }
 
     /// <summary>The usage error for a word that belongs nowhere (since 0.7.3; before, it was silently ignored). A word
     /// that directly follows the save, the zip or an option's value usually means a path with a space that wasn't
     /// quoted, so the message says so and shows the quoted form.</summary>
-    static UserError ExtraWord(string command, (int Index, string Word, string? Before, bool AfterValue) x, bool hasPositional)
+    static UserError ExtraWord(string command, List<(int Index, string Word, string? Before, bool AfterValue)> extras, bool hasPositional)
     {
+        var x = extras[0];
+        // Extra words right after the first one belong to the same split path (C:\My Cool Saves\x.sfs is three words).
+        var run = new List<string> { x.Word };
+        for (int k = 1; k < extras.Count && extras[k].Index == extras[k - 1].Index + 1; k++) run.Add(extras[k].Word);
         string one = command == "check" ? "save" : "zip";
         string example = command == "check" ? "check \"C:\\My Saves\\Save3.sfs\"" : "solo \"C:\\My Logs\\StarfieldLogs-1.zip\"";
         string quoting = $"a path with spaces needs quotes: sf-save-health {example}";
@@ -146,8 +154,11 @@ internal sealed class CommandLine(string[] args)
                 || (HasFileExtension(x.Before, OtherFiles) && x.Word.IndexOfAny(['\\', '/']) < 0));
         if (x.Before is not null && !completeFile && LooksLikePath(x.Before, x.Word))
         {
-            string joined = x.Before + " " + x.Word;
-            return new UserError($"\"{x.Before}\" and \"{x.Word}\" look like one path with a space in it, split in two",
+            string joined = x.Before + " " + string.Join(' ', run);
+            string parts = run.Count == 1
+                ? $"\"{x.Before}\" and \"{x.Word}\" look like one path with a space in it, split in two"
+                : $"{string.Join(", ", run.Prepend(x.Before).Select(w => $"\"{w}\""))} look like one path with spaces in it, split in {run.Count + 1}";
+            return new UserError(parts,
                 x.AfterValue
                     ? $"a path with spaces needs quotes: put the whole path in quotes after its option, for example \"{joined}\""
                     : $"a path with spaces needs quotes: sf-save-health {command} \"{joined}\"");

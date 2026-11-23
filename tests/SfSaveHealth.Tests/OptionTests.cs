@@ -279,6 +279,15 @@ public class OptionTests : IDisposable
     }
 
     [Fact]
+    public void A_path_split_in_three_words_suggests_the_whole_path()
+    {
+        var (code, err) = RunMain(["check", "C:\\My", "Cool", "Saves\\x.sfs"]);
+        Assert.Equal(3, code);
+        Assert.Contains("error: \"C:\\My\", \"Cool\", \"Saves\\x.sfs\" look like one path with spaces in it, split in 3", err);
+        Assert.Contains("sf-save-health check \"C:\\My Cool Saves\\x.sfs\"", err);
+    }
+
+    [Fact]
     public void A_split_path_after_an_options_value_is_recognized_too()
     {
         var (code, err) = RunMain(["solo", "x.zip", "--reports", "C:\\My", "Reports"]);
@@ -319,11 +328,10 @@ public class OptionTests : IDisposable
     public void An_extra_word_message_is_redacted_under_redact()
     {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (string.IsNullOrEmpty(profile) || profile.Length <= 3) return;   // nothing to hide on this machine
         var (code, err) = RunMain(["check", Path.Combine(profile, "My"), Path.Combine("Saves", "x.sfs"), "--redact"]);
         Assert.Equal(3, code);
-        Assert.Contains("split in two", err);
-        Assert.DoesNotContain(profile, err);
+        Assert.Contains("look like one path", err);   // the message is built the same on every machine
+        if (profile.Length > 3) Assert.DoesNotContain(profile, err);   // a short profile path has nothing to hide
     }
 
     [Fact]
@@ -409,10 +417,18 @@ public class OptionTests : IDisposable
     public void A_first_word_that_starts_with_one_dash_but_is_a_save_or_zip_is_a_file_not_an_option()
     {
         var (code, err) = RunMain(["check", "-old.sfs", "--limit", "x"]);
+        Assert.Equal(3, code);
+        Assert.Contains("--limit x is not a number", err);   // the save was accepted; the bad --limit is what fails
         Assert.DoesNotContain("options start with two dashes", err);
         var (code2, err2) = RunMain(["solo", "-1.zip", "extra"]);
+        Assert.Equal(3, code2);
         Assert.DoesNotContain("options start with two dashes", err2);
-        Assert.Contains("extra word", err2);
+        Assert.Contains("solo takes one zip, but got an extra word \"extra\"", err2);
+        // A first word with one dash and no .sfs or .zip ending is a missing dash. (The rule never looks at the disk;
+        // the test doesn't change the current folder because other tests run in parallel.)
+        var (code4, err4) = RunMain(["check", "-v"]);
+        Assert.Equal(3, code4);
+        Assert.Contains("check doesn't know -v", err4);
         // Elsewhere a single dash is still a missing dash.
         var (code3, err3) = RunMain(["check", "a.sfs", "-json"]);
         Assert.Equal(3, code3);
