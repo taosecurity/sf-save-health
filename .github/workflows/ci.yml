@@ -46,8 +46,10 @@ jobs:
           # Exit codes: 0 healthy, 1 warnings or notes only, 2 problems, 3 couldn't check.
           expect 3                                   # no command: usage, exit 3
           grep -q "^usage: sf-save-health " out.txt
-          expect 3 --help
+          expect 0 --help
           grep -q "^usage: sf-save-health " out.txt
+          expect 0 --version
+          grep -q "^sf-save-health 0.7.4$" out.txt
           expect 3 frobnicate save.sfs               # an unknown command
           grep -q "^unknown command frobnicate" out.txt
           mkdir -p data
