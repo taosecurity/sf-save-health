@@ -139,7 +139,8 @@ The command line is checked before anything runs, and these are usage errors (ex
 - An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text.
 - An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
 - `solo` with both a zip and `--before`/`--after`: give one or the other.
-- `--help` anywhere on the line, which shows the usage text and runs nothing.
+- An extra word that is not an option, not an option's value and not the save (or the zip for `solo`), such as a second save. A path with a space in it that isn't in quotes splits into two words and is refused too: write `check "C:\My Saves\x.sfs"`.
+- `--help`, `-h` or `help` anywhere on the line, which shows the usage text and runs nothing. A word right after an option that takes a value is that value, so `--reports help` names a folder called `help`.
 
 For example:
 
@@ -229,7 +230,7 @@ For Q2 and Q3 the tool reads every version of each quest (the original and every
 | 0 | Healthy: no findings. |
 | 1 | Only warnings or notes. |
 | 2 | At least one problem. |
-| 3 | Couldn't check: a usage error (an unknown command, an option the command doesn't know, an option given without its value or given twice, or `--help`; see Commands), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
+| 3 | Couldn't check: a usage error (an unknown command, an option the command doesn't know, an option given without its value or given twice, an extra word such as a second save or an unquoted path with a space, or `--help`, `-h` or `help`; see Commands), a report that couldn't be written to the output (for example a full disk behind a redirect), a missing or unreadable file, a file that isn't a save, an unsupported save version, a `--log` file that can't be opened, a plugin that can't be read, or no Data folder found. The `error:` line names the file and the `fix:` line says what to do. |
 
 If `solo` can't save its full report into the `--reports` folder, it prints an `error:` line but still exits 0, 1 or 2, because the check ran and the report was printed. The fix line asks you to check that the folder's drive has room and that you may write there, or to pass `--reports` with another folder.
 

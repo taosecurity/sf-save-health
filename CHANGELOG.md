@@ -2,6 +2,32 @@
 
 ## 0.7.3 (unreleased)
 
+### What's new
+
+This release stops quietly ignoring extra words on the command line. A second save, or a path with a space that you forgot to quote, is now refused with a clear error. `-h` and `help` now show the usage text anywhere on the line, the same as `--help`.
+
+### Example
+
+    > sf-save-health check C:\My Saves\x.sfs
+    error: "C:\My" and "Saves\x.sfs" look like one path with a space in it, split in two
+      fix: a path with spaces needs quotes: sf-save-health check "C:\My Saves\x.sfs"
+
+The run ends with exit code 3. The output was checked on 2026-11-22 with the 0.7.3 build.
+
+### Behavior change
+
+- A word that is not an option, not the value of an option and not the save (or the zip for `solo`) is a usage error (exit code 3). Before, it was silently ignored.
+- `-h` or `help` anywhere on the line shows the usage text and runs nothing (exit code 3). Before, only `--help` did that, and `check x.sfs help` ran the check.
+- A word right after an option that takes a value is that option's value, so `--reports help` names a folder called `help` and is not a help request.
+
+### Fixes
+
+- The error for an extra word names the word and the command, and suggests quoting a path with spaces. With `--redact` the words are redacted like other user text. A refused run writes no log.
+- The README's sample outputs now show the 0.7.3 banner, and the release build refuses a README or AGENTS.md whose banner shows another version.
+- The usage text now mentions `-h` and `help`.
+- Two complete paths, such as two `.sfs` files or two zips, are no longer called one path split in two.
+- New tests cover each of these cases.
+
 ## 0.7.2 (2026-11-22)
 
 ### What's new
