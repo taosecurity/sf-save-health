@@ -12,7 +12,7 @@
     <Description>Checks a Starfield save against the installed plugins and reports what looks broken. Read-only.</Description>
     <RootNamespace>SaveHealth</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <Version>0.7.2</Version>
+    <Version>0.7.3</Version>
     <!-- Release builds map source paths to /_/, so no local build folder ends up in the DLL. -->
     <ContinuousIntegrationBuild Condition="'$(Configuration)' == 'Release'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
