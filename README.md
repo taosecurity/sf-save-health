@@ -140,7 +140,8 @@ The command line is checked before anything runs, and these are usage errors (ex
 - An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
 - `solo` with both a zip and `--before`/`--after`: give one or the other.
 - An extra word that is not an option, not an option's value and not the save (or the zip for `solo`), such as a second save. A path with a space in it that isn't in quotes splits into two words and is refused too: write `check "C:\My Saves\x.sfs"`.
-Help is not a usage error. `--help`, `-h` or `help` anywhere on the line shows the usage text, runs nothing and exits 0. `--version` anywhere on the line prints `sf-save-health 0.7.4` and exits 0, and also runs nothing. A word right after an option that takes a value is that value, so `--reports help` names a folder called `help`. A save or zip that is itself named `help` needs a path such as `.\help`. Only an unknown command with help (`chek --help`) and a command with nothing after it (`check` alone) still show the usage and exit 3.
+
+Help is not a usage error. `--help`, `-h` or `help` anywhere on the line shows the usage text, runs nothing and exits 0. `--version` anywhere on the line prints `sf-save-health 0.7.4` and exits 0, and also runs nothing. A word right after an option that takes a value is that value, so `--reports help` names a folder called `help`. A save or zip that is itself named `help` needs a path such as `.\help`. Only an unknown command with help (`chek --help`), a command with nothing after it (`check` alone) and `sf-save-health` with nothing after it still show the usage and exit 3.
 
 For example:
 
