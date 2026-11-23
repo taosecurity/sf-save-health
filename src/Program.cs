@@ -8,8 +8,8 @@ using SaveHealth.Rules;
 // Exit codes: 0 healthy, 1 warnings or notes only, 2 problems, 3 couldn't check (bad arguments, unreadable save,
 // unsupported save version).
 
-// --help anywhere (sf-save-health check x.sfs --help) shows the usage instead of running.
-if (args.Length < 2 || args[0] is "-h" or "--help" or "help" || Array.IndexOf(args, "--help") >= 0)
+// --help, -h or help anywhere (sf-save-health check x.sfs -h) shows the usage instead of running.
+if (args.Length < 2 || CommandLine.WantsHelp(args))
 {
     // An unknown first word (sf-save-health chek, or chek x.sfs --help) says so before the usage, as an unknown
     // command with more after it does. The first word is the user's own text (it can be a save path), so --redact
@@ -27,6 +27,7 @@ if (args.Length < 2 || args[0] is "-h" or "--help" or "help" || Array.IndexOf(ar
         Console.Error.WriteLine("       --data defaults to auto: the STARFIELD_DATA environment variable, then every Steam library, then Game Pass");
         Console.Error.WriteLine("         (<drive>:\\XboxGames\\Starfield\\Content\\Data); the first folder that holds Starfield.esm is used");
         Console.Error.WriteLine("       --reports defaults to .\\sf-save-health-reports; --redact hides the character, user and computer names and the profile folder");
+        Console.Error.WriteLine("       (-h or help anywhere on the line shows this text)");
     });
     return 3;
 }

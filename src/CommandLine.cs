@@ -65,15 +65,28 @@ internal sealed class CommandLine(string[] args)
     /// <summary>Refuses a command line the command can't use, before anything runs: an option the command doesn't
     /// know (a mistyped one, or one that belongs to the other command) and a valued option with no value after it
     /// (last, or followed by another --option). Options are case-sensitive. Then the save or zip's place: check and
-    /// solo need it right after the command, and solo takes either a zip or --before/--after, not both. Other words
-    /// that don't start with -- (the values, extra words) aren't checked here.</summary>
+    /// solo need it right after the command, and solo takes either a zip or --before/--after, not both. A word that is neither an
+    /// option, a value nor the save or zip is an extra word (since 0.7.3) and is refused too. Other words
+    /// that don't start with -- (the values) aren't options.</summary>
     public void RefuseUnknown(string command)
     {
         string other = command == "check" ? "solo" : "check";
+        bool firstWord = Args.Length > 1 && !Args[1].StartsWith("--", StringComparison.Ordinal);
+        // Words that are neither an option, an option's value nor the command's own save or zip (right after the
+        // command): each with the word before it, so a path split by a space can be recognized.
+        var extras = new List<(int Index, string Word, string? Before, bool AfterValue)>();
         for (int i = 1; i < Args.Length; i++)
         {
             string a = Args[i];
-            if (!a.StartsWith("--", StringComparison.Ordinal)) continue;
+            if (!a.StartsWith("--", StringComparison.Ordinal))
+            {
+                if (!(i == 1 && firstWord))
+                {
+                    bool prevIsWord = i > 1 && !Args[i - 1].StartsWith("--", StringComparison.Ordinal) && extras.All(x => x.Index != i - 1);
+                    extras.Add((i, a, prevIsWord ? Args[i - 1] : null, i > 1 && Find(Args[i - 2]) is { TakesValue: true } && prevIsWord));
+                }
+                continue;
+            }
             var o = Find(a);
             if (o is null)
                 throw new UserError($"{command} doesn't know {a}", Closest(a, command) is { } near
@@ -91,7 +104,7 @@ internal sealed class CommandLine(string[] args)
                 i++;   // the value
             }
         }
-        bool first = Args.Length > 1 && !Args[1].StartsWith("--", StringComparison.Ordinal);
+        bool first = firstWord;
         if (command == "check" && !first)
             throw new UserError("check needs the save right after the command", "put the save first, for example sf-save-health check Save3.sfs --json");
         if (command == "solo")
@@ -102,6 +115,53 @@ internal sealed class CommandLine(string[] args)
             if (!pair && !first)
                 throw new UserError("solo needs the zip right after the command", "put the zip first, for example sf-save-health solo StarfieldLogs-1.zip, or pass --before <a.sfs> --after <b.sfs>");
         }
+        if (extras.Count > 0) throw ExtraWord(command, extras[0], firstWord);
+    }
+
+    /// <summary>The usage error for a word that belongs nowhere (since 0.7.3; before, it was silently ignored). A word
+    /// that directly follows the save, the zip or an option's value usually means a path with a space that wasn't
+    /// quoted, so the message says so and shows the quoted form.</summary>
+    static UserError ExtraWord(string command, (int Index, string Word, string? Before, bool AfterValue) x, bool hasPositional)
+    {
+        string one = command == "check" ? "save" : "zip";
+        string example = command == "check" ? "check \"C:\\My Saves\\Save3.sfs\"" : "solo \"C:\\My Logs\\StarfieldLogs-1.zip\"";
+        string quoting = $"a path with spaces needs quotes: sf-save-health {example}";
+        // A first word that already ends in .sfs (check) or .zip (solo) is a complete save or zip, not half of a path:
+        // the second word is then a second save or zip, and "one path split in two" would mislead.
+        bool completeFile = x.Before is not null
+            && (x.Before.EndsWith(".sfs", StringComparison.OrdinalIgnoreCase) || x.Before.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        if (x.Before is not null && !completeFile && LooksLikePath(x.Before, x.Word))
+        {
+            string joined = x.Before + " " + x.Word;
+            return new UserError($"\"{x.Before}\" and \"{x.Word}\" look like one path with a space in it, split in two",
+                x.AfterValue
+                    ? $"a path with spaces needs quotes: put the whole path in quotes after its option, for example \"{joined}\""
+                    : $"a path with spaces needs quotes: sf-save-health {command} \"{joined}\"");
+        }
+        string what = !hasPositional && command == "solo"
+            ? "solo with --before and --after takes no zip or other word"
+            : $"{command} takes one {one}";
+        return new UserError($"{what}, but got an extra word \"{x.Word}\"",
+            $"remove \"{x.Word}\" or, if it is part of a path with a space, put the whole path in quotes ({quoting})");
+    }
+
+    /// <summary>Two neighboring words that look like halves of one path: the first holds a path separator or a drive
+    /// colon, or the second holds a path separator.</summary>
+    static bool LooksLikePath(string before, string word) =>
+        before.IndexOfAny(['\\', '/', ':']) >= 0 || word.IndexOfAny(['\\', '/']) >= 0;
+
+    /// <summary>True when -h, --help or help is on the line as a word of its own: anywhere, so "check x.sfs -h" shows
+    /// the usage instead of running (since 0.7.3). The word right after a valued option is that option's value
+    /// (--reports help names a folder called help), and the command word counts.</summary>
+    public static bool WantsHelp(string[] args)
+    {
+        for (int i = 0; i < args.Length; i++)
+        {
+            string a = args[i];
+            if (a is "--help" or "-h" or "help") return true;
+            if (i > 0 && Array.IndexOf(Valued, a) >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) i++;
+        }
+        return false;
     }
 
     /// <summary>The command's option nearest to a mistyped one: the same name in other letter case, or one at most

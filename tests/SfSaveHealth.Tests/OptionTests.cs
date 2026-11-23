@@ -243,6 +243,152 @@ public class OptionTests : IDisposable
         Assert.Contains("error: solo needs the zip right after the command", err);
     }
 
+    // Extra words (since 0.7.3): a word that is no option, no value and not the save or zip is refused.
+
+    [Theory]
+    [InlineData("check|a.sfs|b.sfs", "check takes one save, but got an extra word \"b.sfs\"")]
+    [InlineData("check|a.sfs|--json|b.sfs", "check takes one save, but got an extra word \"b.sfs\"")]
+    [InlineData("check|a.sfs|--limit|5|b.sfs", "check takes one save, but got an extra word \"b.sfs\"")]
+    [InlineData("check|a.sfs|b.sfs|--json", "check takes one save, but got an extra word \"b.sfs\"")]
+    [InlineData("solo|x.zip|y.zip", "solo takes one zip, but got an extra word \"y.zip\"")]
+    [InlineData("solo|--before|a.sfs|--after|b.sfs|extra", "solo with --before and --after takes no zip or other word, but got an extra word \"extra\"")]
+    [InlineData("solo|--before|a.sfs|extra|--after|b.sfs", "solo with --before and --after takes no zip or other word, but got an extra word \"extra\"")]
+    public void An_extra_word_exits_3_naming_it_before_any_log_is_opened(string line, string message)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain([.. line.Split('|'), "--log", log]);
+        Assert.Equal(3, code);
+        Assert.Contains($"error: {message}", err);
+        Assert.Contains("a path with spaces needs quotes: sf-save-health", err);
+        Assert.False(File.Exists(log));   // a refused run writes no log
+    }
+
+    [Theory]
+    [InlineData("check", "C:\\My", "Saves\\x.sfs")]
+    [InlineData("solo", "C:\\My", "Logs\\StarfieldLogs-1.zip")]
+    public void An_unquoted_path_with_a_space_is_recognized_as_one_split_path(string command, string first, string second)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain([command, first, second, "--log", log]);
+        Assert.Equal(3, code);
+        Assert.Contains($"error: \"{first}\" and \"{second}\" look like one path with a space in it, split in two", err);
+        Assert.Contains($"fix: a path with spaces needs quotes: sf-save-health {command} \"{first} {second}\"", err);
+        Assert.False(File.Exists(log));
+    }
+
+    [Fact]
+    public void A_split_path_after_an_options_value_is_recognized_too()
+    {
+        var (code, err) = RunMain(["solo", "x.zip", "--reports", "C:\\My", "Reports"]);
+        Assert.Equal(3, code);
+        Assert.Contains("error: \"C:\\My\" and \"Reports\" look like one path with a space in it, split in two", err);
+        Assert.Contains("fix: a path with spaces needs quotes: put the whole path in quotes after its option, for example \"C:\\My Reports\"", err);
+    }
+
+    [Fact]
+    public void An_extra_word_after_a_plain_name_is_not_called_a_split_path()
+    {
+        var (code, err) = RunMain(["check", "a.sfs", "b.sfs"]);
+        Assert.Equal(3, code);
+        Assert.DoesNotContain("look like one path", err);
+    }
+
+    [Theory]
+    [InlineData("check", "C:\\Saves\\a.sfs", "C:\\Saves\\b.sfs", "check takes one save")]
+    [InlineData("solo", "C:\\Logs\\a.zip", "C:\\Logs\\b.zip", "solo takes one zip")]
+    public void Two_complete_files_are_not_called_one_split_path(string command, string first, string second, string what)
+    {
+        var (code, err) = RunMain([command, first, second]);
+        Assert.Equal(3, code);
+        Assert.DoesNotContain("look like one path", err);
+        Assert.Contains($"error: {what}, but got an extra word \"{second}\"", err);
+    }
+
+    [Fact]
+    public void An_option_error_still_comes_before_an_extra_word()
+    {
+        var (_, err) = RunMain(["check", "a.sfs", "b.sfs", "--plugin", "p"]);
+        Assert.Contains("doesn't know --plugin", err);
+        var (_, err2) = RunMain(["check", "--json", "a.sfs"]);
+        Assert.Contains("check needs the save right after the command", err2);
+    }
+
+    [Fact]
+    public void An_extra_word_message_is_redacted_under_redact()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(profile) || profile.Length <= 3) return;   // nothing to hide on this machine
+        var (code, err) = RunMain(["check", Path.Combine(profile, "My"), Path.Combine("Saves", "x.sfs"), "--redact"]);
+        Assert.Equal(3, code);
+        Assert.Contains("split in two", err);
+        Assert.DoesNotContain(profile, err);
+    }
+
+    [Fact]
+    public void Values_are_not_extra_words()
+    {
+        new CommandLine(["check", "a.sfs", "--plugins", "p.txt", "--limit", "5", "--log", "l.log"]).RefuseUnknown("check");
+        new CommandLine(["solo", "--before", "a.sfs", "--after", "b.sfs", "--reports", "r"]).RefuseUnknown("solo");
+    }
+
+    // -h and help anywhere (since 0.7.3), like --help.
+
+    [Theory]
+    [InlineData("check|x.sfs|-h")]
+    [InlineData("check|x.sfs|help")]
+    [InlineData("solo|x.zip|-h")]
+    [InlineData("solo|--before|a.sfs|--after|b.sfs|help")]
+    [InlineData("check|help")]
+    [InlineData("check|-h")]
+    [InlineData("check|x.sfs|--json|-h|--limit|5")]
+    public void Dash_h_or_help_anywhere_shows_the_usage_and_runs_nothing(string line)
+    {
+        using var d = new TempDir();
+        string log = Path.Combine(d.Path, "x.log");
+        var (code, err) = RunMain([.. line.Split('|'), "--log", log]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("usage: sf-save-health check <save.sfs>", err);
+        Assert.False(File.Exists(log));
+    }
+
+    [Fact]
+    public void An_unknown_command_with_dash_h_after_it_says_so_then_shows_the_usage()
+    {
+        var (code, err) = RunMain(["chek", "x.sfs", "-h"]);
+        Assert.Equal(3, code);
+        Assert.StartsWith("unknown command chek", err);
+        Assert.Contains("usage: sf-save-health check <save.sfs>", err);
+    }
+
+    [Fact]
+    public void Help_as_an_options_value_is_that_value_not_a_help_request()
+    {
+        Assert.False(CommandLine.WantsHelp(["check", "x.sfs", "--plugins", "help"]));
+        Assert.False(CommandLine.WantsHelp(["solo", "x.zip", "--reports", "help"]));
+        Assert.False(CommandLine.WantsHelp(["check", "x.sfs", "--log", "-h"]));
+        var (_, err) = RunMain(["solo", "x.zip", "--reports", "help", "--json"]);
+        Assert.DoesNotContain("usage:", err);   // refused for --json, not shown as a help request
+        Assert.True(CommandLine.WantsHelp(["check", "x.sfs", "--json", "help"]));
+        Assert.True(CommandLine.WantsHelp(["check", "x.sfs", "--reports", "x", "-h"]));
+    }
+
+    [Fact]
+    public void The_usage_text_says_that_dash_h_and_help_show_it()
+    {
+        var (_, err) = RunMain(["--help"]);
+        Assert.Contains("-h or help anywhere on the line shows this text", err);
+    }
+
+    [Fact]
+    public void Help_is_a_help_request_never_an_extra_word()
+    {
+        var (_, err) = RunMain(["check", "a.sfs", "b.sfs", "help"]);
+        Assert.StartsWith("usage:", err);
+        Assert.DoesNotContain("extra word", err);
+    }
+
     [Fact]
     public void Help_after_a_command_shows_the_usage_and_runs_nothing()
     {
