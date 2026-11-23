@@ -78,7 +78,9 @@ internal sealed class CommandLine(string[] args)
         for (int i = 1; i < Args.Length; i++)
         {
             string a = Args[i];
-            if (a.Length > 1 && a[0] == '-' && a[1] != '-')
+            // The save or zip right after the command may start with a dash (-old.sfs): it is a file, not an option.
+            bool dashFile = i == 1 && firstWord && (HasFileExtension(a, SaveOrZip) || File.Exists(a) || Directory.Exists(a));
+            if (a.Length > 1 && a[0] == '-' && a[1] != '-' && !dashFile)
             {
                 // A single dash (-json, -v): an option with a dash missing, not a path or an extra word.
                 string dashed = "--" + a[1..];
@@ -137,10 +139,11 @@ internal sealed class CommandLine(string[] args)
         // A first word that already ends in .sfs (check) or .zip (solo) is a complete save or zip, not half of a path:
         // the second word is then a second save or zip, and "one path split in two" would mislead.
         bool completeFile = x.Before is not null
-            && (x.Before.EndsWith(".sfs", StringComparison.OrdinalIgnoreCase) || x.Before.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-                // Any other complete file name (--plugins C:\p\Plugins.txt oops) is complete too, unless the next word
-                // holds a path separator (C:\My Mods.v2\x).
-                || (Path.GetExtension(x.Before).Length > 1 && x.Word.IndexOfAny(['\\', '/']) < 0));
+            && (HasFileExtension(x.Before, SaveOrZip)
+                // Another complete file name (--plugins C:\p\Plugins.txt oops) is complete too, unless the next word
+                // holds a path separator (C:\My Mods.txt\x). The extension is read by hand: Path.GetExtension
+                // depends on the platform's separators.
+                || (HasFileExtension(x.Before, OtherFiles) && x.Word.IndexOfAny(['\\', '/']) < 0));
         if (x.Before is not null && !completeFile && LooksLikePath(x.Before, x.Word))
         {
             string joined = x.Before + " " + x.Word;
@@ -155,6 +158,12 @@ internal sealed class CommandLine(string[] args)
         return new UserError($"{what}, but got an extra word \"{x.Word}\"",
             $"remove \"{x.Word}\" or, if it is part of a path with a space, put the whole path in quotes ({quoting})");
     }
+
+    static readonly string[] SaveOrZip = [".sfs", ".zip"];
+    static readonly string[] OtherFiles = [".txt", ".json", ".log"];
+
+    static bool HasFileExtension(string word, string[] extensions) =>
+        extensions.Any(e => word.EndsWith(e, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Two neighboring words that look like halves of one path: the first holds a path separator or a drive
     /// colon, or the second holds a path separator.</summary>

@@ -397,9 +397,26 @@ public class OptionTests : IDisposable
         Assert.Equal(3, code);
         Assert.Contains("got an extra word \"oops\"", err);
         Assert.DoesNotContain("split in two", err);
-        // A real split path with a dot in its folder name is still recognized.
-        var (_, err2) = RunMain(["check", "a.sfs", "--plugins", "C:\\My", "Mods.v2\\Plugins.txt"]);
+        // A split path whose first half ends in a file extension, with a separator in the second half, is still recognized.
+        var (_, err2) = RunMain(["check", "a.sfs", "--plugins", "C:\\My.txt", "Mods\\Plugins.txt"]);
         Assert.Contains("split in two", err2);
+        // A folder name with a dot that isn't a file extension doesn't make the first half a complete file.
+        var (_, err3) = RunMain(["check", "a.sfs", "--data", "C:\\Saves.old", "Backup"]);
+        Assert.Contains("split in two", err3);
+    }
+
+    [Fact]
+    public void A_first_word_that_starts_with_one_dash_but_is_a_save_or_zip_is_a_file_not_an_option()
+    {
+        var (code, err) = RunMain(["check", "-old.sfs", "--limit", "x"]);
+        Assert.DoesNotContain("options start with two dashes", err);
+        var (code2, err2) = RunMain(["solo", "-1.zip", "extra"]);
+        Assert.DoesNotContain("options start with two dashes", err2);
+        Assert.Contains("extra word", err2);
+        // Elsewhere a single dash is still a missing dash.
+        var (code3, err3) = RunMain(["check", "a.sfs", "-json"]);
+        Assert.Equal(3, code3);
+        Assert.Contains("options start with two dashes", err3);
     }
 
     [Fact]
