@@ -88,9 +88,11 @@ internal sealed class CommandLine(string[] args)
             {
                 // A single dash (-json, -v): an option with a dash missing, not a path or an extra word.
                 string dashed = "--" + a[1..];
+                // As the first word it may be a file with no .sfs or .zip ending: say how to name it.
+                string fileHint = i == 1 ? $"; if {a} is a file name, write it as .\\{a}" : "";
                 throw new UserError($"{command} doesn't know {a}", Closest(dashed, command) is { } fix
-                    ? $"options start with two dashes: use {fix} (sf-save-health --help lists them)"
-                    : "options start with two dashes; sf-save-health --help lists them");
+                    ? $"options start with two dashes: use {fix} (sf-save-health --help lists them{fileHint})"
+                    : $"options start with two dashes; sf-save-health --help lists them{fileHint}");
             }
             if (!a.StartsWith("--", StringComparison.Ordinal))
             {

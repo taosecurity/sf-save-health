@@ -429,6 +429,7 @@ public class OptionTests : IDisposable
         var (code4, err4) = RunMain(["check", "-v"]);
         Assert.Equal(3, code4);
         Assert.Contains("check doesn't know -v", err4);
+        Assert.Contains("if -v is a file name, write it as .\\-v", err4);   // the way to name such a file (round 6)
         // Elsewhere a single dash is still a missing dash.
         var (code3, err3) = RunMain(["check", "a.sfs", "-json"]);
         Assert.Equal(3, code3);
