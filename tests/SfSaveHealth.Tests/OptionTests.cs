@@ -520,7 +520,7 @@ public class OptionTests : IDisposable
     public void The_usage_text_says_that_dash_h_and_help_show_it()
     {
         var (_, err) = RunMain(["--help"]);
-        Assert.Contains("-h or help anywhere on the line shows this text and exits 0; --version prints the version", err);
+        Assert.Contains("(--help, -h or help anywhere on the line shows this text and exits 0; --version prints the version", err);
     }
 
     [Fact]

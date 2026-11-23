@@ -47,7 +47,7 @@ if (args.Length < 2 || wantsHelp || wantsVersion)
         Console.Error.WriteLine("       --data defaults to auto: the STARFIELD_DATA environment variable, then every Steam library, then Game Pass");
         Console.Error.WriteLine("         (<drive>:\\XboxGames\\Starfield\\Content\\Data); the first folder that holds Starfield.esm is used");
         Console.Error.WriteLine("       --reports defaults to .\\sf-save-health-reports; --redact hides the character, user and computer names and the profile folder");
-        Console.Error.WriteLine("       (-h or help anywhere on the line shows this text and exits 0; --version prints the version)");
+        Console.Error.WriteLine("       (--help, -h or help anywhere on the line shows this text and exits 0; --version prints the version)");
     });
     return wantsHelp && !unknownCommand ? 0 : 3;
 }

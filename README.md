@@ -136,7 +136,7 @@ The command line is checked before anything runs, and these are usage errors (ex
 - An option that takes a value given without one, such as `--data` at the end of the line or followed by another option. Write `--data auto` for the automatic search.
 - An option the command doesn't know, such as `--plugin` or `--JSON`. Options are case-sensitive. When the name is close to a real option, the fix names it (and says that options are case-sensitive when only the letter case differs).
 - An option of the other command, such as `--json` with `solo` or `--reports` with `check`. A mistyped one, such as `--JSON` with `solo`, is named as the other command's option too.
-- An unknown command, such as `chek`. Given alone or with `--help`, it is followed by the usage text and still exits 3.
+- An unknown command, such as `chek`. Given alone or with `--help` or `--version`, it is followed by the usage text and still exits 3.
 - An option before the save, such as `check --json Save3.sfs`: the save (or for `solo`, the zip) comes right after the command.
 - `solo` with both a zip and `--before`/`--after`: give one or the other.
 - An extra word that is not an option, not an option's value and not the save (or the zip for `solo`), such as a second save. A path with a space in it that isn't in quotes splits into two words and is refused too: write `check "C:\My Saves\x.sfs"`.
