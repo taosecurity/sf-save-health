@@ -24,34 +24,22 @@ For AI assistants: step-by-step instructions are in [AGENTS.md](AGENTS.md).
 
 ## Example
 
-This is a real save, checked with `--redact` so the character name is hidden. The player removed some mods since the save was made (mod names changed). Lines marked `...` were left out to keep it short.
+This is a real save, checked with `--redact` so the character name is hidden. It is a healthy save, so every rule reports nothing to fix. A save with problems prints each finding under its rule and exits with code 2.
 
 ```
 > sf-save-health check "Save3_....sfs" --redact
-sf-save-health 0.7.1: Save3_C875E8D7_<name>_000024_20261029193005_1_0_4.sfs
-  <player>, level 1, Jemison - The Lodge, playtime 0 days 0 hours 24 minutes, saved 2026-10-29 19:30 UTC
-  78 plugins in the save; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
+sf-save-health 0.7.3: Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs
+  <player>, level 8, Frontier, playtime 0 days 0 hours 38 minutes, saved 2026-11-11 00:06 UTC
+  13 plugins in the save; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
 
-S1. Plugins in the save that are missing from the Data folder: 18 of 78 plugins in the save are missing from the Data folder (10 with data left behind)
-  PROBLEM full plugin missing: NewModA.esm [New Mod A]
-            2 change records, 3 references inside records
-  PROBLEM full plugin missing: NewModB.esm
-            1 change records, 1 references inside records
-  ...
-  NOTE    full plugin missing: NewModC.esm
-            0 change records, 0 references inside records
-  ...
-    What it means (problem): The save was made with this plugin and still holds data for it, but it isn't installed now. If you removed the mod on purpose, that data stays behind; if not, reinstall it before playing.
-    What it means (note): The save was made with this plugin, which isn't installed now. It left nothing behind in the change forms (its scripts are not checked yet).
+S1. Plugins in the save that are missing from the Data folder: 0 of 13 plugins in the save are missing from the Data folder (0 with data left behind)
 
 S2. Form IDs that point past the save's plugin list: 0 found
-...
 
-Q1. Running quests from plugins that are not installed: 580 quests in the save, 580 decoded exactly, 571 compared with their plugin versions
-  WARNING NewModA.esm: 1 quest(s) still running, but the plugin is not installed
-            NewModA.esm:8AA  running, stage
-  ...
-    What it means (warning): These quests were running when the save was made, and the mod that defines them is gone. The game drops them on load; if the mod was removed by mistake, reinstall it.
+S3. Forms not found in their plugin: 0 distinct (0 change records, 0 references)
+    not counted: 104 engine form(s) below Starfield.esm:800, which live in the game itself
+
+Q1. Running quests from plugins that are not installed: 558 quests in the save, 558 decoded exactly, 558 compared with their plugin versions
 
 Q2. Done stages the quest no longer has: 0 quest(s)
 
@@ -61,20 +49,20 @@ Q4. Quests at a completing stage but not marked complete (heuristic): 0 quest(s)
 
 Q5. Quests caught starting or stopping, or complete with open objectives (heuristic): 0 starting or stopping, 0 complete with an open objective
 
-B1. Objects created during play (bloat): 6,378 objects created during play (OK; normal 25,000-35,000, note from 60,000, warning from 150,000); save file 1.9 MB
-    5,916 created placed objects, 282 created actors, 180 other; 15,282 change records in all
+B1. Objects created during play (bloat): 13,018 objects created during play (OK; normal 25,000-35,000, note from 60,000, warning from 150,000); save file 2.2 MB
+    12,551 created placed objects, 197 created actors, 270 other; 27,724 change records in all
     plugins the created objects and actors point to most (a hint at what made them):
-         3,859  Starfield.esm
-         1,953  SFBGS00D.esm
-            87  SFBGS050.esm
-            76  SFBGS003.esm
-            36  sfta04.esm
+         9,340  Starfield.esm
+         1,670  SFBGS00D.esm
+           320  SFBGS003.esm
+            98  SFBGS050.esm
+            13  ShatteredSpace.esm
 
-11 problem(s), 6 warning(s), 8 note(s).
+Healthy: no problems found.
 Not checked yet: Papyrus script data (orphaned scripts, stuck stacks).
 ```
 
-The exit code for this save is 2, because it found problems.
+The exit code for this save is 0, because it found no problems.
 
 ## Install
 
@@ -178,10 +166,10 @@ Here is a real `solo` run on a log-collector zip from a new character's test, wi
 
 ```
 > sf-save-health solo "StarfieldLogs-20261110-190752-....zip" --redact
-sf-save-health 0.7.1 solo: StarfieldLogs-20261110-190752-....zip
+sf-save-health 0.7.3 solo: StarfieldLogs-20261110-190752-....zip
   before: before-Save2_143C1F9EM<name>_000030_20261110235820_3_0_4.sfs  level 3, Jemison - The Lodge, playtime 0 days 0 hours 30 minutes, saved 2026-11-10 23:58 UTC
   after:  after-Save3_143C1F9EM<name>_000038_20261111000630_8_0_4.sfs  level 8, Frontier, playtime 0 days 0 hours 38 minutes, saved 2026-11-11 00:06 UTC
-...
+  <player>; checked against C:\Program Files (x86)\Steam\steamapps\common\Starfield\Data
 
 Plugins:
   13 in the after save (13 before)
@@ -199,9 +187,11 @@ Objects created during play: 7,398 -> 13,018 (+5,620); placed objects 6,987 -> 1
 
 Quests that changed: 55
   changed  DialogueUCTheDen (Starfield.esm:2A1049): running, stage - -> running, stage 50
+  ...
   new      FFDenR01 (Starfield.esm:1E7942): running, stage 10
   ...
   changed  MQ101 (Starfield.esm:3448): running, completed, stage 1800 -> stopped, completed, stage 9000
+  ...
   new      RI01 (Starfield.esm:2C9C97): stopped, completed, stage 10000
   ...
   ... 15 more in the saved report (or use --limit N)
