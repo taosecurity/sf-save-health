@@ -239,6 +239,8 @@ If `solo` can't save its full report into the `--reports` folder, it prints an `
 
 ## Privacy: `--redact`
 
+sf-save-health collects nothing and makes no network calls. See [PRIVACY.md](PRIVACY.md) for what it reads and writes.
+
 Reports are made to be shared, for example when you ask for help with a broken save. `--redact` hides what could identify you in everything the tool writes (the text and JSON reports, the saved solo report, errors and the log):
 
 - the character's name, in the text and as the hex code the game puts in save file names (`<player>`, `<name>`);
